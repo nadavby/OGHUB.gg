@@ -27,7 +27,20 @@ const PORT = parseInt(process.env.API_PORT || '3001', 10);
 
 // ─── Middleware ──────────────────────────────────────────────
 
-app.use(cors({ origin: true, credentials: true }));
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:3000')
+  .split(',')
+  .map(o => o.trim());
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: '5mb' }));
 
 // ─── Health Check ───────────────────────────────────────────
