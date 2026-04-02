@@ -17,67 +17,22 @@ interface Game {
   topScore: number | null;
 }
 
-const DEMO_GAMES: Game[] = [
-  {
-    id: '1', slug: 'stack-tower', title: 'Stack Tower',
-    description: 'Stack blocks as high as you can! Perfect timing is everything.',
-    thumbnailUrl: null, difficulty: 2, tags: ['arcade', 'timing'],
-    isFeatured: true, activeChallenges: 3, topScore: 15420,
-  },
-  {
-    id: '2', slug: 'color-match', title: 'Color Match Rush',
-    description: 'Match colors at lightning speed. Beat the clock!',
-    thumbnailUrl: null, difficulty: 1, tags: ['puzzle', 'speed'],
-    isFeatured: true, activeChallenges: 2, topScore: 8930,
-  },
-  {
-    id: '3', slug: 'rhythm-dash', title: 'Rhythm Dash',
-    description: 'Tap to the beat and dodge obstacles in this rhythm runner.',
-    thumbnailUrl: null, difficulty: 3, tags: ['rhythm', 'runner'],
-    isFeatured: false, activeChallenges: 5, topScore: 22100,
-  },
-  {
-    id: '4', slug: 'bubble-pop', title: 'Bubble Pop Blitz',
-    description: 'Pop bubbles in chains for massive combos and multipliers.',
-    thumbnailUrl: null, difficulty: 1, tags: ['casual', 'combo'],
-    isFeatured: false, activeChallenges: 1, topScore: 45600,
-  },
-  {
-    id: '5', slug: 'gravity-flip', title: 'Gravity Flip',
-    description: 'Navigate through impossible gravity-defying obstacle courses.',
-    thumbnailUrl: null, difficulty: 4, tags: ['platformer', 'hard'],
-    isFeatured: true, activeChallenges: 4, topScore: 3200,
-  },
-  {
-    id: '6', slug: 'word-blitz', title: 'Word Blitz',
-    description: 'Find words faster than anyone else. Every second counts!',
-    thumbnailUrl: null, difficulty: 2, tags: ['word', 'speed'],
-    isFeatured: false, activeChallenges: 2, topScore: 12800,
-  },
-  {
-    id: '7', slug: 'sniper-shot', title: 'Sniper Shot',
-    description: 'Precision shooting challenges. One shot, one kill.',
-    thumbnailUrl: null, difficulty: 3, tags: ['aim', 'precision'],
-    isFeatured: false, activeChallenges: 3, topScore: 9999,
-  },
-  {
-    id: '8', slug: 'maze-runner', title: 'Maze Runner Pro',
-    description: 'Solve randomly generated mazes before time runs out.',
-    thumbnailUrl: null, difficulty: 5, tags: ['puzzle', 'maze'],
-    isFeatured: false, activeChallenges: 1, topScore: 1850,
-  },
-];
-
 export default function HomePage() {
-  const [games, setGames] = useState<Game[]>(DEMO_GAMES);
+  const [games, setGames] = useState<Game[]>([]);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api('/api/games')
-      .then((data: Game[]) => {
-        if (data && data.length > 0) setGames(data);
+    api<Game[]>('/api/games')
+      .then((data) => {
+        setGames(data && data.length > 0 ? data : []);
       })
-      .catch(() => {});
+      .catch((err) => {
+        setError('Failed to load games. Please try again later.');
+        console.error('Games fetch error:', err);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const filteredGames = activeTag
@@ -90,66 +45,98 @@ export default function HomePage() {
 
   return (
     <div className="game-feed">
-      {/* Category Tags */}
-      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 12, scrollbarWidth: 'none' }}>
-        <button
-          className="tag"
-          style={{
-            background: !activeTag ? 'var(--neon-purple)' : undefined,
-            color: !activeTag ? 'white' : undefined,
-            borderColor: !activeTag ? 'var(--neon-purple)' : undefined,
-            boxShadow: !activeTag ? '0 0 12px var(--neon-purple-glow)' : undefined,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-          onClick={() => setActiveTag(null)}
-        >
-          All Games
-        </button>
-        {allTags.map(tag => (
+      {loading && (
+        <div className="empty-state">
+          <p>Loading games...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="empty-state">
+          <span className="icon">⚠️</span>
+          <p>{error}</p>
           <button
-            key={tag}
+            className="tag"
+            style={{ cursor: 'pointer', marginTop: 12 }}
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              api<Game[]>('/api/games')
+                .then((data) => setGames(data && data.length > 0 ? data : []))
+                .catch((err) => {
+                  setError('Failed to load games. Please try again later.');
+                  console.error('Games fetch error:', err);
+                })
+                .finally(() => setLoading(false));
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && (<>
+        {/* Category Tags */}
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 12, scrollbarWidth: 'none' }}>
+          <button
             className="tag"
             style={{
-              background: activeTag === tag ? 'var(--neon-purple)' : undefined,
-              color: activeTag === tag ? 'white' : undefined,
-              borderColor: activeTag === tag ? 'var(--neon-purple)' : undefined,
-              boxShadow: activeTag === tag ? '0 0 12px var(--neon-purple-glow)' : undefined,
+              background: !activeTag ? 'var(--neon-purple)' : undefined,
+              color: !activeTag ? 'white' : undefined,
+              borderColor: !activeTag ? 'var(--neon-purple)' : undefined,
+              boxShadow: !activeTag ? '0 0 12px var(--neon-purple-glow)' : undefined,
               cursor: 'pointer',
               whiteSpace: 'nowrap',
-              textTransform: 'capitalize',
             }}
-            onClick={() => setActiveTag(tag)}
+            onClick={() => setActiveTag(null)}
           >
-            {tag}
+            All Games
           </button>
-        ))}
-      </div>
-
-      {/* Featured Games */}
-      {featured.length > 0 && (
-        <div className="featured-section">
-          <h2 className="section-title">Featured</h2>
-          {featured.map((game) => (
-            <div key={game.id} style={{ marginBottom: 16 }}>
-              <GameCard {...game} />
-            </div>
+          {allTags.map(tag => (
+            <button
+              key={tag}
+              className="tag"
+              style={{
+                background: activeTag === tag ? 'var(--neon-purple)' : undefined,
+                color: activeTag === tag ? 'white' : undefined,
+                borderColor: activeTag === tag ? 'var(--neon-purple)' : undefined,
+                boxShadow: activeTag === tag ? '0 0 12px var(--neon-purple-glow)' : undefined,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                textTransform: 'capitalize',
+              }}
+              onClick={() => setActiveTag(tag)}
+            >
+              {tag}
+            </button>
           ))}
         </div>
-      )}
 
-      {/* All Games */}
-      <h2 className="section-title">All Games</h2>
-      {allGames.map((game) => (
-        <GameCard key={game.id} {...game} />
-      ))}
+        {/* Featured Games */}
+        {featured.length > 0 && (
+          <div className="featured-section">
+            <h2 className="section-title">Featured</h2>
+            {featured.map((game) => (
+              <div key={game.id} style={{ marginBottom: 16 }}>
+                <GameCard {...game} />
+              </div>
+            ))}
+          </div>
+        )}
 
-      {filteredGames.length === 0 && (
-        <div className="empty-state">
-          <span className="icon">🎮</span>
-          <p>No games found</p>
-        </div>
-      )}
+        {/* All Games */}
+        <h2 className="section-title">All Games</h2>
+        {allGames.map((game) => (
+          <GameCard key={game.id} {...game} />
+        ))}
+
+        {filteredGames.length === 0 && (
+          <div className="empty-state">
+            <span className="icon">🎮</span>
+            <p>No games found</p>
+          </div>
+        )}
+      </>)}
     </div>
   );
 }
