@@ -16,6 +16,8 @@ import { sessionsRouter } from './sessions/sessions.router';
 import { leaderboardRouter } from './leaderboards/leaderboard.router';
 import { ghostsRouter } from './ghosts/ghosts.router';
 import { errorHandler } from './common/error-handler';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './common/swagger';
 import { startEventDrainWorker } from './events/event-pipeline';
 import { startChallengeLifecycleWorker } from './challenges/challenge-lifecycle';
 import pino from 'pino';
@@ -69,6 +71,10 @@ app.get('/api/health', async (_req, res) => {
     res.status(503).json({ status: 'degraded', timestamp: new Date().toISOString() });
   }
 });
+
+// ─── API Docs ──────────────────────────────────────────────
+
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // ─── Routes ─────────────────────────────────────────────────
 
