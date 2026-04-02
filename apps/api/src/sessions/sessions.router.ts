@@ -72,6 +72,19 @@ sessionsRouter.post('/create', async (req: AuthenticatedRequest, res, next) => {
         });
       }
 
+      // Accumulate entry fee into prize pool (minus platform fee)
+      if (challengeId) {
+        const challenge = await tx.challenge.findUnique({ where: { id: challengeId } });
+        if (challenge) {
+          const platformCut = entryFee.mul(challenge.platformFee);
+          const poolContribution = entryFee.sub(platformCut);
+          await tx.challenge.update({
+            where: { id: challengeId },
+            data: { prizePool: { increment: poolContribution } },
+          });
+        }
+      }
+
       // Create session in the same transaction
       return tx.gameSession.create({
         data: {

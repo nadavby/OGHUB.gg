@@ -1,4 +1,5 @@
 import { prisma } from '../main';
+import { distributeChallengePrizes } from './prize-distribution';
 
 const LIFECYCLE_INTERVAL_MS = 60_000;
 
@@ -29,6 +30,28 @@ export async function runLifecycleTick(): Promise<{ activated: number; completed
       data: { status: 'COMPLETED' },
     });
     entryCompleted = result.count;
+  }
+
+  const completedIds: string[] = [];
+  if (timeExpired.count > 0) {
+    const justCompleted = await prisma.challenge.findMany({
+      where: {
+        status: 'COMPLETED',
+        updatedAt: { gte: new Date(now.getTime() - LIFECYCLE_INTERVAL_MS - 5000) },
+      },
+      select: { id: true },
+    });
+    completedIds.push(...justCompleted.map(c => c.id));
+  }
+  if (entryCapped.length > 0) {
+    completedIds.push(...entryCapped.map(r => r.id));
+  }
+  for (const id of completedIds) {
+    try {
+      await distributeChallengePrizes(id);
+    } catch (err) {
+      console.error(`[Challenge Lifecycle] Prize distribution failed for ${id}:`, err);
+    }
   }
 
   return { activated: activated.count, completed: timeExpired.count + entryCompleted };
