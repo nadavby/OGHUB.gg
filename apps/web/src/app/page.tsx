@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import GameCard from '@/components/GameCard';
-import LiveWinnersTicker from '@/components/LiveWinnersTicker';
 import { api } from '@/lib/api';
 
 interface Game {
@@ -92,20 +90,6 @@ export default function HomePage() {
 
   return (
     <div className="game-feed">
-      {/* Live Winners Ticker — Social Proof */}
-      <div style={{ margin: '0 -16px 16px -16px' }}>
-        <LiveWinnersTicker />
-      </div>
-
-      {/* Urgency: Active players + multiplier */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div className="active-players">
-          <span className="active-dot" />
-          <span>847 playing now</span>
-        </div>
-        <span className="multiplier-badge">🔥 2x BONUS ACTIVE</span>
-      </div>
-
       {/* Category Tags */}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 12, scrollbarWidth: 'none' }}>
         <button
@@ -142,10 +126,10 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* Featured — Hot Games */}
+      {/* Featured Games */}
       {featured.length > 0 && (
         <div className="featured-section">
-          <h2 className="section-title">🔥 Hot Right Now</h2>
+          <h2 className="section-title">Featured</h2>
           {featured.map((game) => (
             <div key={game.id} style={{ marginBottom: 16 }}>
               <GameCard {...game} />
@@ -154,14 +138,8 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Urgency: Limited spots */}
-      <div className="urgency-banner" style={{ marginBottom: 16 }}>
-        <span className="urgency-dot" />
-        <span>🏆 Weekend Showdown — <strong style={{ color: 'var(--gold)' }}>$5,000</strong> prize pool filling fast!</span>
-      </div>
-
       {/* All Games */}
-      <h2 className="section-title">⚡ All Games</h2>
+      <h2 className="section-title">All Games</h2>
       {allGames.map((game) => (
         <GameCard key={game.id} {...game} />
       ))}
