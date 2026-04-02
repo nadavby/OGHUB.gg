@@ -16,6 +16,7 @@ import { sessionsRouter } from './sessions/sessions.router';
 import { leaderboardRouter } from './leaderboards/leaderboard.router';
 import { ghostsRouter } from './ghosts/ghosts.router';
 import { errorHandler } from './common/error-handler';
+import { startEventDrainWorker } from './events/event-pipeline';
 
 // ─── Globals ────────────────────────────────────────────────
 
@@ -66,6 +67,11 @@ app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`🚀 OGHUB API running on http://localhost:${PORT}`);
+
+  // Start event pipeline drain worker
+  startEventDrainWorker(process.env.WORKER_NAME || 'worker-1').catch((err) => {
+    console.error('Failed to start event drain worker:', err);
+  });
 });
 
 export default app;
