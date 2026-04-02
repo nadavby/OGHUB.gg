@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { Decimal } from '@prisma/client/runtime/library';
 import { prisma } from '../main';
-import { authGuard, AuthenticatedRequest } from '../common/auth';
+import { authGuard, AuthenticatedRequest, roleGuard } from '../common/auth';
 import { AppError } from '../common/error-handler';
 
 export const walletRouter = Router();
@@ -36,7 +36,7 @@ walletRouter.get('/balance', async (req: AuthenticatedRequest, res, next) => {
 
 // ─── Deposit ────────────────────────────────────────────────
 
-walletRouter.post('/deposit', async (req: AuthenticatedRequest, res, next) => {
+walletRouter.post('/deposit', roleGuard('ADMIN'), async (req: AuthenticatedRequest, res, next) => {
   try {
     const { amount } = req.body;
     const depositAmount = new Decimal(amount);
