@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { prisma } from '../main';
+import { authGuard } from '../common/auth';
 import { AppError } from '../common/error-handler';
 
 export const ghostsRouter = Router();
+
+ghostsRouter.use(authGuard);
 
 // ─── Get Top Ghost for Challenge ────────────────────────────
 
