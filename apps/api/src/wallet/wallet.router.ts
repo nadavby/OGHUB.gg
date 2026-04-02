@@ -3,7 +3,8 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { prisma } from '../main';
 import { authGuard, AuthenticatedRequest, roleGuard } from '../common/auth';
 import { AppError } from '../common/error-handler';
-import { validate, depositSchema, withdrawalSchema } from '../common/schemas';
+import { validate, depositSchema, withdrawalSchema, doubleOrNothingSchema } from '../common/schemas';
+import { flipCoin } from './double-or-nothing';
 
 export const walletRouter = Router();
 
@@ -164,6 +165,50 @@ walletRouter.get('/transactions', async (req: AuthenticatedRequest, res, next) =
       page,
       limit,
       hasMore: page * limit < total,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Double or Nothing ─────────────────────────────────────
+
+walletRouter.post('/double-or-nothing', async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const { amount } = validate(doubleOrNothingSchema, req.body);
+    const betAmount = new Decimal(amount);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const wallet = await tx.wallet.findUnique({ where: { userId: req.user!.userId } });
+      if (!wallet) throw new AppError('Wallet not found', 404);
+      if (wallet.balance.lt(betAmount)) throw new AppError('Insufficient balance', 402);
+
+      const flip = flipCoin();
+
+      if (flip.won) {
+        const newBalance = wallet.balance.add(betAmount);
+        await tx.wallet.update({ where: { id: wallet.id }, data: { balance: newBalance } });
+        await tx.walletTransaction.create({
+          data: { walletId: wallet.id, type: 'PRIZE_PAYOUT', amount: betAmount, balanceBefore: wallet.balance, balanceAfter: newBalance, description: 'Double or Nothing — Won' },
+        });
+        return { newBalance, flip };
+      } else {
+        const newBalance = wallet.balance.sub(betAmount);
+        await tx.wallet.update({ where: { id: wallet.id }, data: { balance: newBalance } });
+        await tx.walletTransaction.create({
+          data: { walletId: wallet.id, type: 'ENTRY_FEE', amount: betAmount.neg(), balanceBefore: wallet.balance, balanceAfter: newBalance, description: 'Double or Nothing — Lost' },
+        });
+        return { newBalance, flip };
+      }
+    }, { isolationLevel: 'Serializable' });
+
+    res.json({
+      success: true,
+      data: {
+        won: result.flip.won,
+        balance: result.newBalance.toString(),
+        proof: { serverSeed: result.flip.serverSeed, clientSeed: result.flip.clientSeed, hash: result.flip.hash },
+      },
     });
   } catch (err) {
     next(err);
