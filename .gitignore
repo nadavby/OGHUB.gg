@@ -1,0 +1,18 @@
+node_modules
+.next
+dist
+.turbo
+.env
+*.log
+.DS_Store
+
+# Unity
+games/*/Library/
+games/*/Temp/
+games/*/Obj/
+games/*/Build/
+games/*/Builds/
+games/*/Logs/
+games/*/UserSettings/
+games/*/*.csproj
+games/*/*.sln

@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── USERS & AUTH ───────────────────────────────────────────
+
+enum UserRole {
+  PLAYER
+  DEVELOPER
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  passwordHash  String
+  displayName   String?
+  avatarUrl     String?
+  role          UserRole  @default(PLAYER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  wallet        Wallet?
+  sessions      GameSession[]
+  scores        Score[]
+  developerApps DeveloperApp[]
+
+  @@index([email])
+  @@index([username])
+}
+
+// ─── WALLET & TRANSACTIONS ─────────────────────────────────
+
+model Wallet {
+  id            String              @id @default(cuid())
+  userId        String              @unique
+  balance       Decimal             @default(0) @db.Decimal(12, 2)
+  frozenBalance Decimal             @default(0) @db.Decimal(12, 2)
+  currency      String              @default("USD")
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  user          User                @relation(fields: [userId], references: [id])
+  transactions  WalletTransaction[]
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  ENTRY_FEE
+  PRIZE_PAYOUT
+  PLATFORM_FEE
+  REFUND
+}
+
+model WalletTransaction {
+  id            String          @id @default(cuid())
+  walletId      String
+  type          TransactionType
+  amount        Decimal         @db.Decimal(12, 2)
+  balanceBefore Decimal         @db.Decimal(12, 2)
+  balanceAfter  Decimal         @db.Decimal(12, 2)
+  description   String?
+  referenceId   String?
+  createdAt     DateTime        @default(now())
+
+  wallet        Wallet          @relation(fields: [walletId], references: [id])
+
+  @@index([walletId])
+  @@index([referenceId])
+}
+
+// ─── GAMES & DEVELOPERS ────────────────────────────────────
+
+model Game {
+  id            String       @id @default(cuid())
+  slug          String       @unique
+  title         String
+  description   String?
+  thumbnailUrl  String?
+  bannerUrl     String?
+  deepLinkScheme String?
+  difficulty    Int          @default(1)
+  minPlayers    Int          @default(1)
+  maxPlayers    Int          @default(1)
+  isActive      Boolean      @default(true)
+  isFeatured    Boolean      @default(false)
+  tags          String[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  developerId   String
+  developer     DeveloperApp @relation(fields: [developerId], references: [id])
+  challenges    Challenge[]
+  sessions      GameSession[]
+
+  @@index([slug])
+  @@index([isActive, isFeatured])
+}
+
+model DeveloperApp {
+  id            String    @id @default(cuid())
+  name          String
+  apiKey        String    @unique @default(cuid())
+  apiSecret     String
+  webhookUrl    String?
+  revenueShare  Decimal   @default(0.70) @db.Decimal(4, 2)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  ownerId       String
+  owner         User      @relation(fields: [ownerId], references: [id])
+  games         Game[]
+
+  @@index([apiKey])
+}
+
+// ─── CHALLENGES ─────────────────────────────────────────────
+
+enum ChallengeStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Challenge {
+  id            String           @id @default(cuid())
+  gameId        String
+  title         String
+  description   String?
+  entryFee      Decimal          @default(0) @db.Decimal(12, 2)
+  prizePool     Decimal          @default(0) @db.Decimal(12, 2)
+  platformFee   Decimal          @default(0.10) @db.Decimal(4, 2)
+  maxEntries    Int?
+  startsAt      DateTime?
+  endsAt        DateTime?
+  status        ChallengeStatus  @default(ACTIVE)
+  modifiers     Json?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  game          Game             @relation(fields: [gameId], references: [id])
+  sessions      GameSession[]
+
+  @@index([gameId, status])
+  @@index([status, startsAt])
+}
+
+// ─── GAME SESSIONS ──────────────────────────────────────────
+
+enum SessionStatus {
+  CREATED
+  VALIDATED
+  IN_PROGRESS
+  COMPLETED
+  EXPIRED
+  REJECTED
+}
+
+model GameSession {
+  id            String        @id @default(cuid())
+  userId        String
+  gameId        String
+  challengeId   String?
+  seed          String
+  token         String        @unique
+  status        SessionStatus @default(CREATED)
+  config        Json?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  expiresAt     DateTime
+  createdAt     DateTime      @default(now())
+
+  user          User          @relation(fields: [userId], references: [id])
+  game          Game          @relation(fields: [gameId], references: [id])
+  challenge     Challenge?    @relation(fields: [challengeId], references: [id])
+  score         Score?
+  replay        Replay?
+  events        EventLog[]
+
+  @@index([userId])
+  @@index([token])
+  @@index([status])
+}
+
+// ─── SCORES & LEADERBOARDS ──────────────────────────────────
+
+model Score {
+  id            String      @id @default(cuid())
+  sessionId     String      @unique
+  userId        String
+  value         Int
+  isValidated   Boolean     @default(false)
+  validatedAt   DateTime?
+  metadata      Json?
+  createdAt     DateTime    @default(now())
+
+  session       GameSession @relation(fields: [sessionId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+
+  @@index([userId, value])
+  @@index([sessionId])
+}
+
+// ─── REPLAYS (GHOST SYSTEM) ────────────────────────────────
+
+model Replay {
+  id            String      @id @default(cuid())
+  sessionId     String      @unique
+  seed          String
+  inputTimeline Json
+  duration      Int
+  checksum      String
+  createdAt     DateTime    @default(now())
+
+  session       GameSession @relation(fields: [sessionId], references: [id])
+}
+
+// ─── EVENT LOGS ─────────────────────────────────────────────
+
+model EventLog {
+  id            String      @id @default(cuid())
+  sessionId     String
+  eventType     String
+  payload       Json
+  timestamp     DateTime
+  sequence      Int
+  createdAt     DateTime    @default(now())
+
+  session       GameSession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId, sequence])
+}

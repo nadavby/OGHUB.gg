@@ -1,0 +1,16 @@
+{
+  "name": "@oghub/sdk",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "echo 'no lint configured'"
+  },
+  "dependencies": {
+    "@oghub/shared": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
