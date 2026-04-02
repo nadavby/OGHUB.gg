@@ -3,7 +3,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { prisma } from '../main';
 import { authGuard, AuthenticatedRequest, roleGuard } from '../common/auth';
 import { AppError } from '../common/error-handler';
-import { validate, depositSchema } from '../common/schemas';
+import { validate, depositSchema, withdrawalSchema } from '../common/schemas';
 
 export const walletRouter = Router();
 
@@ -76,6 +76,47 @@ walletRouter.post('/deposit', roleGuard('ADMIN'), async (req: AuthenticatedReque
         balance: result.balance.toString(),
         frozenBalance: result.frozenBalance.toString(),
         currency: result.currency,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Withdraw ──────────────────────────────────────────────
+
+walletRouter.post('/withdraw', async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const { amount } = validate(withdrawalSchema, req.body);
+    const withdrawAmount = new Decimal(amount);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const wallet = await tx.wallet.findUnique({ where: { userId: req.user!.userId } });
+      if (!wallet) throw new AppError('Wallet not found', 404);
+      if (wallet.balance.lt(withdrawAmount)) throw new AppError('Insufficient balance', 402);
+
+      const newBalance = wallet.balance.sub(withdrawAmount);
+      const updated = await tx.wallet.update({ where: { id: wallet.id }, data: { balance: newBalance } });
+      await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type: 'WITHDRAWAL',
+          amount: withdrawAmount.neg(),
+          balanceBefore: wallet.balance,
+          balanceAfter: newBalance,
+          description: 'Withdrawal (pending manual processing)',
+        },
+      });
+      return updated;
+    }, { isolationLevel: 'Serializable' });
+
+    res.json({
+      success: true,
+      data: {
+        balance: result.balance.toString(),
+        frozenBalance: result.frozenBalance.toString(),
+        currency: result.currency,
+        message: 'Withdrawal request submitted. Processing may take 1-3 business days.',
       },
     });
   } catch (err) {

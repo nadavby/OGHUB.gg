@@ -58,6 +58,10 @@ export const registerGameSchema = z.object({
   tags: z.array(z.string().max(20)).max(10).optional(),
 });
 
+export const withdrawalSchema = z.object({
+  amount: z.number().positive('Amount must be positive').max(10000, 'Amount exceeds maximum per withdrawal'),
+});
+
 export function validate<T>(schema: z.ZodSchema<T>, data: unknown): T {
   const result = schema.safeParse(data);
   if (!result.success) {
