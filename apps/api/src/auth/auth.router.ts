@@ -1,19 +1,53 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
 import { prisma } from '../main';
 import { signToken, authGuard, AuthenticatedRequest } from '../common/auth';
 import { AppError } from '../common/error-handler';
 
 export const authRouter = Router();
 
+// ─── Rate Limiters ─────────────────────────────────────────
+
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { success: false, error: 'Too many login attempts, try again in a minute' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  message: { success: false, error: 'Too many registration attempts, try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ─── Password Validation ───────────────────────────────────
+
+function validatePassword(password: string): string | null {
+  if (password.length < 8) return 'Password must be at least 8 characters';
+  if (!/[a-z]/.test(password)) return 'Password must contain a lowercase letter';
+  if (!/[A-Z]/.test(password)) return 'Password must contain an uppercase letter';
+  if (!/[0-9]/.test(password)) return 'Password must contain a number';
+  return null;
+}
+
 // ─── Register ───────────────────────────────────────────────
 
-authRouter.post('/register', async (req, res, next) => {
+authRouter.post('/register', registerLimiter, async (req, res, next) => {
   try {
     const { email, username, password, displayName } = req.body;
 
     if (!email || !username || !password) {
       throw new AppError('Email, username, and password are required');
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      throw new AppError(passwordError);
     }
 
     const existing = await prisma.user.findFirst({
@@ -63,7 +97,7 @@ authRouter.post('/register', async (req, res, next) => {
 
 // ─── Login ──────────────────────────────────────────────────
 
-authRouter.post('/login', async (req, res, next) => {
+authRouter.post('/login', loginLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
