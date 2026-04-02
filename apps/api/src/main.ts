@@ -17,6 +17,7 @@ import { leaderboardRouter } from './leaderboards/leaderboard.router';
 import { ghostsRouter } from './ghosts/ghosts.router';
 import { errorHandler } from './common/error-handler';
 import { startEventDrainWorker } from './events/event-pipeline';
+import { startChallengeLifecycleWorker } from './challenges/challenge-lifecycle';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
 
@@ -91,6 +92,9 @@ app.listen(PORT, () => {
   startEventDrainWorker(process.env.WORKER_NAME || 'worker-1').catch((err) => {
     console.error('Failed to start event drain worker:', err);
   });
+
+  // Start challenge lifecycle worker
+  startChallengeLifecycleWorker();
 });
 
 async function gracefulShutdown(signal: string) {
