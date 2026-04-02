@@ -1,6 +1,9 @@
 import dotenv from 'dotenv';
 dotenv.config({ path: '../../.env' });
 
+import { validateEnv } from './common/env';
+validateEnv();
+
 import express from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';

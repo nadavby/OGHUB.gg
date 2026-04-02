@@ -12,7 +12,7 @@ export interface AuthenticatedRequest extends Request {
   user?: AuthPayload;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 export function signToken(payload: AuthPayload): string {
   return jwt.sign(payload, JWT_SECRET, {
