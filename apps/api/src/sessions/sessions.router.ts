@@ -305,6 +305,7 @@ sessionsRouter.post('/:id/end', enhancedHmacGuard, async (req: AuthenticatedRequ
     if (isValid && session.challengeId) {
       await redis.zadd(
         `leaderboard:${session.challengeId}`,
+        'GT',
         score,
         req.user!.userId,
       );
@@ -372,10 +373,11 @@ async function calculateNearMiss(
       const difference = targetScore - score;
       const percentile = ((totalPlayers - rank) / totalPlayers) * 100;
 
+      if (rank === 0) return null; // Already #1, no near-miss
       if (difference > 0 && difference / targetScore < 0.1) {
         return {
           message: `You were ${((difference / targetScore) * 100).toFixed(1)}% away from rank ${rank}!`,
-          targetRank: rank,
+          targetRank: rank, // 1-based: the rank the user almost reached
           targetScore,
           difference,
           percentile: Math.round(percentile),
