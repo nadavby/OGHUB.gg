@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useAuth } from './useAuth';
 import { api, getStoredToken } from '@/lib/api';
 
 interface WalletData {
@@ -10,42 +11,19 @@ interface WalletData {
 }
 
 export function useWallet() {
-  const [wallet, setWallet] = useState<WalletData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchWallet = useCallback(async () => {
-    const token = getStoredToken();
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const data = await api<WalletData>('/api/wallet/balance', { token });
-      setWallet(data);
-    } catch (err) {
-      console.error('Failed to fetch wallet:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchWallet();
-  }, [fetchWallet]);
+  const { wallet, walletLoading: loading, refreshWallet } = useAuth();
 
   const deposit = useCallback(async (amount: number) => {
     const token = getStoredToken();
     if (!token) return;
-
     const data = await api<WalletData>('/api/wallet/deposit', {
       method: 'POST',
       body: { amount },
       token,
     });
-    setWallet(data);
+    await refreshWallet();
     return data;
-  }, []);
+  }, [refreshWallet]);
 
-  return { wallet, loading, deposit, refetch: fetchWallet };
+  return { wallet, loading, deposit, refetch: refreshWallet };
 }
