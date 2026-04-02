@@ -85,7 +85,7 @@ sessionsRouter.post('/create', async (req: AuthenticatedRequest, res, next) => {
           config: { seed, gameId, challengeId },
         },
       });
-    });
+    }, { isolationLevel: 'Serializable' });
 
     res.status(201).json({
       success: true,
@@ -299,7 +299,7 @@ sessionsRouter.post('/:id/end', enhancedHmacGuard, async (req: AuthenticatedRequ
       }
 
       return scoreRecord;
-    });
+    }, { isolationLevel: 'Serializable' });
 
     // Update leaderboard in Redis
     if (isValid && session.challengeId) {

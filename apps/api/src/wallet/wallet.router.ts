@@ -71,7 +71,7 @@ walletRouter.post('/deposit', async (req: AuthenticatedRequest, res, next) => {
       });
 
       return updated;
-    });
+    }, { isolationLevel: 'Serializable' });
 
     res.json({
       success: true,
