@@ -4,6 +4,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { prisma, redis } from '../main';
 import { authGuard, AuthenticatedRequest, signToken } from '../common/auth';
 import { AppError } from '../common/error-handler';
+import { enhancedHmacGuard } from '../common/sdk-integrity';
 import { validateSession } from '../anticheat/fraud-engine';
 import { enqueueEvents, getBackpressure } from '../events/event-pipeline';
 
@@ -103,7 +104,7 @@ sessionsRouter.post('/create', async (req: AuthenticatedRequest, res, next) => {
 
 // ─── Validate Session (SDK calls this) ─────────────────────
 
-sessionsRouter.post('/:id/validate', async (req: AuthenticatedRequest, res, next) => {
+sessionsRouter.post('/:id/validate', enhancedHmacGuard, async (req: AuthenticatedRequest, res, next) => {
   try {
     const session = await prisma.gameSession.findUnique({
       where: { id: req.params.id },
@@ -174,7 +175,7 @@ sessionsRouter.post('/:id/validate', async (req: AuthenticatedRequest, res, next
 
 // ─── Ingest Events (batched, via pipeline) ─────────────────
 
-sessionsRouter.post('/:id/events', async (req: AuthenticatedRequest, res, next) => {
+sessionsRouter.post('/:id/events', enhancedHmacGuard, async (req: AuthenticatedRequest, res, next) => {
   try {
     const { events } = req.body;
 
@@ -234,7 +235,7 @@ sessionsRouter.post('/:id/events', async (req: AuthenticatedRequest, res, next) 
 
 // ─── End Session ────────────────────────────────────────────
 
-sessionsRouter.post('/:id/end', async (req: AuthenticatedRequest, res, next) => {
+sessionsRouter.post('/:id/end', enhancedHmacGuard, async (req: AuthenticatedRequest, res, next) => {
   try {
     const { score, replayData, metadata } = req.body;
 
