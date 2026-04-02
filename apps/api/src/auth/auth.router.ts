@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { prisma } from '../main';
 import { signToken, authGuard, AuthenticatedRequest } from '../common/auth';
 import { AppError } from '../common/error-handler';
+import { validate, registerSchema, loginSchema } from '../common/schemas';
 
 export const authRouter = Router();
 
@@ -39,11 +40,7 @@ function validatePassword(password: string): string | null {
 
 authRouter.post('/register', registerLimiter, async (req, res, next) => {
   try {
-    const { email, username, password, displayName } = req.body;
-
-    if (!email || !username || !password) {
-      throw new AppError('Email, username, and password are required');
-    }
+    const { email, username, password, displayName } = validate(registerSchema, req.body);
 
     const passwordError = validatePassword(password);
     if (passwordError) {
@@ -99,11 +96,7 @@ authRouter.post('/register', registerLimiter, async (req, res, next) => {
 
 authRouter.post('/login', loginLimiter, async (req, res, next) => {
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      throw new AppError('Email and password are required');
-    }
+    const { email, password } = validate(loginSchema, req.body);
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {

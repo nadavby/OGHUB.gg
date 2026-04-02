@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../main';
 import { authGuard, AuthenticatedRequest, roleGuard } from '../common/auth';
 import { AppError } from '../common/error-handler';
+import { validate, registerGameSchema } from '../common/schemas';
 import crypto from 'crypto';
 
 export const gamesRouter = Router();
@@ -133,11 +134,7 @@ gamesRouter.post(
   roleGuard('DEVELOPER', 'ADMIN'),
   async (req: AuthenticatedRequest, res, next) => {
     try {
-      const { title, slug, description, thumbnailUrl, bannerUrl, deepLinkScheme, difficulty, tags } = req.body;
-
-      if (!title || !slug) {
-        throw new AppError('Title and slug are required');
-      }
+      const { title, slug, description, thumbnailUrl, bannerUrl, deepLinkScheme, difficulty, tags } = validate(registerGameSchema, req.body);
 
       // Find or create developer app
       let devApp = await prisma.developerApp.findFirst({

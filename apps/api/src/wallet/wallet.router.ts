@@ -3,6 +3,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { prisma } from '../main';
 import { authGuard, AuthenticatedRequest, roleGuard } from '../common/auth';
 import { AppError } from '../common/error-handler';
+import { validate, depositSchema } from '../common/schemas';
 
 export const walletRouter = Router();
 
@@ -38,12 +39,8 @@ walletRouter.get('/balance', async (req: AuthenticatedRequest, res, next) => {
 
 walletRouter.post('/deposit', roleGuard('ADMIN'), async (req: AuthenticatedRequest, res, next) => {
   try {
-    const { amount } = req.body;
+    const { amount } = validate(depositSchema, req.body);
     const depositAmount = new Decimal(amount);
-
-    if (depositAmount.lte(0)) {
-      throw new AppError('Deposit amount must be positive');
-    }
 
     const result = await prisma.$transaction(async (tx) => {
       const wallet = await tx.wallet.findUnique({

@@ -4,6 +4,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { prisma, redis } from '../main';
 import { authGuard, AuthenticatedRequest, signToken } from '../common/auth';
 import { AppError } from '../common/error-handler';
+import { validate, createSessionSchema, endSessionSchema, eventsSchema } from '../common/schemas';
 import { enhancedHmacGuard } from '../common/sdk-integrity';
 import { validateSession } from '../anticheat/fraud-engine';
 import { enqueueEvents, getBackpressure } from '../events/event-pipeline';
@@ -16,9 +17,7 @@ sessionsRouter.use(authGuard);
 
 sessionsRouter.post('/create', async (req: AuthenticatedRequest, res, next) => {
   try {
-    const { gameId, challengeId } = req.body;
-
-    if (!gameId) throw new AppError('gameId is required');
+    const { gameId, challengeId } = validate(createSessionSchema, req.body);
 
     const game = await prisma.game.findUnique({ where: { id: gameId } });
     if (!game || !game.isActive) throw new AppError('Game not found', 404);
@@ -177,11 +176,7 @@ sessionsRouter.post('/:id/validate', enhancedHmacGuard, async (req: Authenticate
 
 sessionsRouter.post('/:id/events', enhancedHmacGuard, async (req: AuthenticatedRequest, res, next) => {
   try {
-    const { events } = req.body;
-
-    if (!Array.isArray(events) || events.length === 0) {
-      throw new AppError('Events array is required');
-    }
+    const { events } = validate(eventsSchema, req.body);
 
     // Backpressure check
     const pressure = await getBackpressure();
@@ -237,9 +232,7 @@ sessionsRouter.post('/:id/events', enhancedHmacGuard, async (req: AuthenticatedR
 
 sessionsRouter.post('/:id/end', enhancedHmacGuard, async (req: AuthenticatedRequest, res, next) => {
   try {
-    const { score, replayData, metadata } = req.body;
-
-    if (score === undefined) throw new AppError('Score is required');
+    const { score, replayData, metadata } = validate(endSessionSchema, req.body);
 
     const session = await prisma.gameSession.findUnique({
       where: { id: req.params.id },
