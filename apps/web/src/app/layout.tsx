@@ -3,6 +3,7 @@ import '@/styles/globals.css';
 import { AuthProvider } from '@/hooks/useAuth';
 import BottomNav from '@/components/BottomNav';
 import WalletBadge from '@/components/WalletBadge';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
   title: 'OGHUB — Skill-Based Gaming Hub',
@@ -24,14 +25,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AuthProvider>
           <div className="app-shell">
-            <header className="app-header">
-              <div className="app-header-row">
-                <span className="app-logo">OGHUB</span>
-                <WalletBadge />
-              </div>
-            </header>
-            <main>{children}</main>
-            <BottomNav />
+            <ErrorBoundary section="header">
+              <header className="app-header">
+                <div className="app-header-row">
+                  <span className="app-logo">OGHUB</span>
+                  <WalletBadge />
+                </div>
+              </header>
+            </ErrorBoundary>
+            <ErrorBoundary section="main content">
+              <main>{children}</main>
+            </ErrorBoundary>
+            <ErrorBoundary section="navigation">
+              <BottomNav />
+            </ErrorBoundary>
           </div>
         </AuthProvider>
       </body>
