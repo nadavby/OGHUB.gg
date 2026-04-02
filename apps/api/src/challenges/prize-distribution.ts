@@ -15,6 +15,15 @@ function calculatePrizeSplit(prizePool: Decimal, playerCount: number): number[] 
 }
 
 export async function distributeChallengePrizes(challengeId: string): Promise<PrizeDistribution[]> {
+  // Idempotency: check if prizes were already distributed for this challenge
+  const existing = await prisma.walletTransaction.findFirst({
+    where: { type: 'PRIZE_PAYOUT', referenceId: challengeId },
+  });
+  if (existing) {
+    console.log(`[Prize Distribution] Challenge ${challengeId}: already distributed, skipping`);
+    return [];
+  }
+
   const challenge = await prisma.challenge.findUnique({ where: { id: challengeId } });
   if (!challenge || challenge.prizePool.lte(0)) return [];
 

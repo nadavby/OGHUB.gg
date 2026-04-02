@@ -72,9 +72,11 @@ app.get('/api/health', async (_req, res) => {
   }
 });
 
-// ─── API Docs ──────────────────────────────────────────────
+// ─── API Docs (development only) ───────────────────────────
 
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+}
 
 // ─── Routes ─────────────────────────────────────────────────
 
