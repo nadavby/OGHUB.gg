@@ -46,8 +46,16 @@ app.use(express.json({ limit: '5mb' }));
 
 // ─── Health Check ───────────────────────────────────────────
 
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', async (_req, res) => {
+  try {
+    await Promise.all([
+      prisma.$queryRaw`SELECT 1`,
+      redis.ping(),
+    ]);
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  } catch (err) {
+    res.status(503).json({ status: 'degraded', timestamp: new Date().toISOString() });
+  }
 });
 
 // ─── Routes ─────────────────────────────────────────────────
@@ -73,5 +81,15 @@ app.listen(PORT, () => {
     console.error('Failed to start event drain worker:', err);
   });
 });
+
+function gracefulShutdown(signal: string) {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
+  prisma.$disconnect().catch(console.error);
+  redis.quit().catch(console.error);
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export default app;
