@@ -17,6 +17,8 @@ import { leaderboardRouter } from './leaderboards/leaderboard.router';
 import { ghostsRouter } from './ghosts/ghosts.router';
 import { errorHandler } from './common/error-handler';
 import { startEventDrainWorker } from './events/event-pipeline';
+import pino from 'pino';
+import pinoHttp from 'pino-http';
 
 // ─── Globals ────────────────────────────────────────────────
 
@@ -25,6 +27,15 @@ export const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379'
 
 const app = express();
 const PORT = parseInt(process.env.API_PORT || '3001', 10);
+
+const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
+
+app.use(pinoHttp({
+  logger,
+  autoLogging: {
+    ignore: (req) => (req as any).url === '/api/health',
+  },
+}));
 
 // ─── Middleware ──────────────────────────────────────────────
 
