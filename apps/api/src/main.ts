@@ -23,7 +23,7 @@ import pinoHttp from 'pino-http';
 // ─── Globals ────────────────────────────────────────────────
 
 export const prisma = new PrismaClient();
-export const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+export const redis = new Redis(process.env.REDIS_URL!);
 
 const app = express();
 const PORT = parseInt(process.env.API_PORT || '3001', 10);
@@ -93,10 +93,12 @@ app.listen(PORT, () => {
   });
 });
 
-function gracefulShutdown(signal: string) {
+async function gracefulShutdown(signal: string) {
   console.log(`\n${signal} received. Shutting down gracefully...`);
-  prisma.$disconnect().catch(console.error);
-  redis.quit().catch(console.error);
+  await Promise.allSettled([
+    prisma.$disconnect(),
+    redis.quit(),
+  ]);
   process.exit(0);
 }
 
