@@ -35,20 +35,16 @@ export class OGHubSDK {
    * Initialize a game session with the token received from the hub.
    * Validates with the backend and returns session config including ghost data.
    */
-  async initSession(sessionToken: string): Promise<SessionConfig> {
+  async initSession(sessionId: string, sessionToken: string): Promise<SessionConfig> {
     this.sessionToken = sessionToken;
-
-    // Extract session ID from token (call validate endpoint)
+    this.sessionId = sessionId;
     const response = await this.request(
       'POST',
-      `/api/sessions/${this.extractSessionId(sessionToken)}/validate`,
+      `/api/sessions/${sessionId}/validate`,
       {},
       sessionToken,
     );
-
-    this.sessionId = response.sessionId;
     this.seed = response.seed;
-
     return response as SessionConfig;
   }
 
@@ -225,18 +221,6 @@ export class OGHubSDK {
     return json.data;
   }
 
-  private extractSessionId(token: string): string {
-    // The session ID is passed separately — for now use a placeholder
-    // In production, the hub passes sessionId alongside the token
-    try {
-      const payload = JSON.parse(
-        Buffer.from(token.split('.')[1], 'base64').toString(),
-      );
-      return payload.sessionId || '';
-    } catch {
-      return '';
-    }
-  }
 }
 
 export default OGHubSDK;
