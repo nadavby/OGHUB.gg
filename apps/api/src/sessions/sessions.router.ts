@@ -347,41 +347,6 @@ sessionsRouter.post('/:id/end', enhancedHmacGuard, async (req: AuthenticatedRequ
   }
 });
 
-// ─── Validation Helpers ─────────────────────────────────────
-
-function validateScore(
-  score: number,
-  session: any,
-  replayData: any,
-): boolean {
-  // Basic validation checks
-  if (score < 0) return false;
-  if (score > 999999999) return false;
-
-  // Check session duration (shouldn't complete in < 1 second)
-  if (session.startedAt) {
-    const duration = Date.now() - new Date(session.startedAt).getTime();
-    if (duration < 1000) return false; // too fast
-  }
-
-  // Check replay data integrity
-  if (replayData) {
-    if (replayData.seed && replayData.seed !== session.seed) {
-      return false; // seed mismatch
-    }
-
-    // Check for impossible input rates (>30 inputs/sec sustained)
-    if (replayData.inputTimeline && replayData.inputTimeline.length > 0) {
-      const timeline = replayData.inputTimeline;
-      const duration = replayData.duration || 1;
-      const inputRate = timeline.length / (duration / 1000);
-      if (inputRate > 30) return false;
-    }
-  }
-
-  return true;
-}
-
 async function calculateNearMiss(
   challengeId: string,
   userId: string,
