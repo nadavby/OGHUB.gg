@@ -35,9 +35,16 @@ sessionsRouter.post('/create', async (req: AuthenticatedRequest, res, next) => {
       entryFee = challenge.entryFee;
     }
 
-    // Deduct entry fee if applicable
-    if (entryFee.gt(0)) {
-      await prisma.$transaction(async (tx) => {
+    const seed = crypto.randomBytes(16).toString('hex');
+    const sessionToken = signToken({
+      userId: req.user!.userId,
+      email: '',
+      role: 'SESSION',
+    });
+
+    const session = await prisma.$transaction(async (tx) => {
+      // Deduct entry fee if applicable
+      if (entryFee.gt(0)) {
         const wallet = await tx.wallet.findUnique({
           where: { userId: req.user!.userId },
         });
@@ -63,30 +70,20 @@ sessionsRouter.post('/create', async (req: AuthenticatedRequest, res, next) => {
             referenceId: challengeId,
           },
         });
-      });
-    }
+      }
 
-    const seed = crypto.randomBytes(16).toString('hex');
-    const sessionToken = signToken({
-      userId: req.user!.userId,
-      email: '',
-      role: 'SESSION',
-    });
-
-    const session = await prisma.gameSession.create({
-      data: {
-        userId: req.user!.userId,
-        gameId,
-        challengeId,
-        seed,
-        token: sessionToken,
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 min
-        config: {
-          seed,
+      // Create session in the same transaction
+      return tx.gameSession.create({
+        data: {
+          userId: req.user!.userId,
           gameId,
           challengeId,
+          seed,
+          token: sessionToken,
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+          config: { seed, gameId, challengeId },
         },
-      },
+      });
     });
 
     res.status(201).json({
