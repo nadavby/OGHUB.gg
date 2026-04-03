@@ -1,131 +1,217 @@
+// Assets/Scripts/SDK/OGHubBridge.cs
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
+using NeonRunner.Core;
+using NeonRunner.Game;
 
 namespace NeonRunner.SDK
 {
-    /// <summary>
-    /// Unity bridge for the OGHUB platform SDK.
-    /// Handles session lifecycle, score submission, and ghost data loading via real HTTP calls.
-    /// </summary>
+    public enum SessionState
+    {
+        Idle,
+        Validating,
+        Ready,
+        InProgress,
+        Submitting,
+        Done,
+        Failed
+    }
+
     public sealed class OGHubBridge : MonoBehaviour
     {
-        public static OGHubBridge Instance { get; private set; }
-
-        [Header("SDK Configuration")]
         [SerializeField] private string _gameId = "neon-runner";
         [SerializeField] private string _apiEndpoint = "http://localhost:3001/api";
 
-        public string GameId => _gameId;
-        public string ChallengeId { get; private set; }
-        public string SessionToken { get; private set; }
+        public SessionState State { get; private set; } = SessionState.Idle;
         public string SessionId { get; private set; }
+        public string SessionToken { get; private set; }
+        public string ChallengeId { get; private set; }
+        public GameConfig CurrentConfig { get; private set; }
+        public bool IsCompetitive => !string.IsNullOrEmpty(SessionId);
 
-        public bool IsInitialized { get; private set; }
-        public Core.GameConfig CurrentConfig { get; private set; }
+        public GhostData LoadedGhost { get; private set; }
+
+        private const int VALIDATE_RETRIES = 3;
+        private const int SUBMIT_RETRIES = 5;
+        private const float HTTP_TIMEOUT = 10f;
 
         private void Awake()
         {
-            if (Instance == null)
-            {
-                Instance = this;
-                DontDestroyOnLoad(gameObject);
+            ServiceLocator.Register(this);
+            DontDestroyOnLoad(gameObject);
+            Application.deepLinkActivated += OnDeepLinkActivated;
+        }
 
-                // ─── OS Deep Link Listener ───
-                Application.deepLinkActivated += OnDeepLinkActivated;
-                if (!string.IsNullOrEmpty(Application.absoluteURL))
-                {
-                    OnDeepLinkActivated(Application.absoluteURL);
-                }
-            }
-            else
-            {
-                Destroy(gameObject);
-            }
+        private void Start()
+        {
+            if (!string.IsNullOrEmpty(Application.absoluteURL))
+                OnDeepLinkActivated(Application.absoluteURL);
+
+            RetryCachedSubmission();
         }
 
         private void OnDeepLinkActivated(string url)
         {
-            Debug.Log($"[OGHub] App Native Launch via Deep Link: {url}");
-            // Parse: neon-runner://session?token=abc&seed=123&challengeId=c1&sessionId=s1
+            Debug.Log($"[OGHubBridge] Deep link: {url}");
             try
             {
                 var uri = new Uri(url);
-                var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
+                var queryParams = ParseQuery(uri.Query);
 
-                string token = queryParams.Get("token");
-                string seedStr = queryParams.Get("seed");
-                string challengeId = queryParams.Get("challengeId");
-                string sessionId = queryParams.Get("sessionId");
+                string token = queryParams.GetValueOrDefault("token");
+                string seed = queryParams.GetValueOrDefault("seed");
+                string sessionId = queryParams.GetValueOrDefault("sessionId");
 
-                if (long.TryParse(seedStr, out long seed))
+                if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(seed) || string.IsNullOrEmpty(sessionId))
                 {
-                    SessionId = sessionId;
-                    InitializeGame(seed, challengeId, token);
-                    UnityEngine.SceneManagement.SceneManager.LoadScene(1);
+                    Debug.LogError("[OGHubBridge] Missing required deep link params");
+                    return;
                 }
+
+                SessionToken = token;
+                SessionId = sessionId;
+                ChallengeId = queryParams.GetValueOrDefault("challengeId");
+
+                int lives = 3;
+                if (queryParams.TryGetValue("lives", out var livesStr) && int.TryParse(livesStr, out var parsedLives))
+                    lives = parsedLives;
+
+                GameModifiers modifiers = GameModifiers.None;
+                if (queryParams.TryGetValue("modifiers", out var modStr) && ushort.TryParse(modStr, out var modVal))
+                    modifiers = (GameModifiers)modVal;
+
+                CurrentConfig = new GameConfig
+                {
+                    Seed = long.Parse(seed),
+                    Modifiers = modifiers,
+                    StartingLives = lives,
+                    TimeLimitSeconds = Fixed.Zero
+                };
+
+                var scene = ServiceLocator.Get<SceneController>();
+                scene?.LoadScene("GameplayScene");
             }
             catch (Exception e)
             {
-                Debug.LogError($"[OGHub] Failed to parse Deep Link: {e.Message}");
+                Debug.LogError($"[OGHubBridge] Failed to parse deep link: {e.Message}");
             }
         }
 
-        /// <summary>
-        /// Initializes the SDK with session configuration from the platform.
-        /// </summary>
-        public void InitializeGame(long seed, string challengeId, string token)
+        public async Task<bool> ValidateSession()
         {
-            ChallengeId = challengeId;
-            SessionToken = token;
+            if (State != SessionState.Idle) return false;
+            State = SessionState.Validating;
 
-            CurrentConfig = new Core.GameConfig
+            for (int attempt = 0; attempt < VALIDATE_RETRIES; attempt++)
             {
-                Seed = seed,
-                Modifiers = Core.GameModifiers.None,
-                StartingLives = 1
+                try
+                {
+                    string url = $"{_apiEndpoint}/sessions/{SessionId}/validate";
+                    string body = JsonUtility.ToJson(new ValidatePayload { gameId = _gameId });
+                    string response = await PostRequest(url, body);
+
+                    if (response != null)
+                    {
+                        var result = JsonUtility.FromJson<ValidateResponse>(response);
+                        if (result.ghostData != null && result.ghostData.inputTimeline != null)
+                        {
+                            LoadedGhost = ParseGhostData(result.ghostData);
+                        }
+
+                        State = SessionState.Ready;
+                        return true;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[OGHubBridge] Validate attempt {attempt + 1} failed: {e.Message}");
+                }
+
+                if (attempt < VALIDATE_RETRIES - 1)
+                {
+                    float delay = Mathf.Pow(2, attempt);
+                    await Task.Delay((int)(delay * 1000));
+                }
+            }
+
+            State = SessionState.Failed;
+            return false;
+        }
+
+        public void MarkInProgress()
+        {
+            if (State == SessionState.Ready)
+                State = SessionState.InProgress;
+        }
+
+        public async Task<SessionOutcome> SubmitScore(ReplayData replayData)
+        {
+            if (State != SessionState.InProgress && State != SessionState.Ready)
+                return null;
+
+            State = SessionState.Submitting;
+
+            var payload = new EndSessionPayload
+            {
+                score = replayData.FinalScore,
+                replayData = new ReplayPayload
+                {
+                    seed = replayData.Seed.ToString(),
+                    inputTimeline = SerializeInputTimeline(replayData.Inputs),
+                    duration = replayData.FinalTick
+                }
             };
 
-            IsInitialized = true;
-            Debug.Log($"[OGHub] Initiated with Seed: {seed}, Challenge: {challengeId}");
-        }
+            string body = JsonUtility.ToJson(payload);
 
-        /// <summary>
-        /// Validates the session with the backend via POST /api/sessions/{SessionId}/validate.
-        /// </summary>
-        public async Task StartSession()
-        {
-            if (!IsInitialized) throw new Exception("SDK not initialized");
-            if (string.IsNullOrEmpty(SessionId)) throw new Exception("SessionId not set");
-
-            string url = $"{_apiEndpoint}/sessions/{SessionId}/validate";
-            using var request = new UnityWebRequest(url, "POST");
-            request.SetRequestHeader("Authorization", $"Bearer {SessionToken}");
-            request.SetRequestHeader("Content-Type", "application/json");
-            request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes("{}"));
-            request.downloadHandler = new DownloadHandlerBuffer();
-
-            var op = request.SendWebRequest();
-            while (!op.isDone) await Task.Yield();
-
-            if (request.result != UnityWebRequest.Result.Success)
+            for (int attempt = 0; attempt < SUBMIT_RETRIES; attempt++)
             {
-                Debug.LogError($"[OGHub] StartSession failed: {request.error} — {request.downloadHandler.text}");
-                throw new Exception($"Session validation failed: {request.error}");
+                try
+                {
+                    string url = $"{_apiEndpoint}/sessions/{SessionId}/end";
+                    string response = await PostRequest(url, body);
+
+                    if (response != null)
+                    {
+                        var outcome = JsonUtility.FromJson<SessionOutcome>(response);
+                        State = SessionState.Done;
+                        return outcome;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[OGHubBridge] Submit attempt {attempt + 1} failed: {e.Message}");
+                }
+
+                if (attempt < SUBMIT_RETRIES - 1)
+                {
+                    float delay = Mathf.Pow(2, attempt);
+                    await Task.Delay((int)(delay * 1000));
+                }
             }
 
-            Debug.Log($"[OGHub] Session validated: {request.downloadHandler.text}");
+            CacheSubmission(body);
+            State = SessionState.Failed;
+            return null;
         }
 
-        /// <summary>
-        /// Fire-and-forget event report via POST /api/sessions/{SessionId}/events.
-        /// </summary>
         public void ReportEvent(string eventType, string dataJson)
         {
-            if (string.IsNullOrEmpty(SessionId)) return;
             _ = SendEventAsync(eventType, dataJson);
+        }
+
+        public void Reset()
+        {
+            State = SessionState.Idle;
+            SessionId = null;
+            SessionToken = null;
+            ChallengeId = null;
+            LoadedGhost = null;
+            CurrentConfig = GameConfig.Default;
         }
 
         private async Task SendEventAsync(string eventType, string dataJson)
@@ -133,109 +219,190 @@ namespace NeonRunner.SDK
             try
             {
                 string url = $"{_apiEndpoint}/sessions/{SessionId}/events";
-                string body = $"{{\"events\":[{{\"eventType\":\"{eventType}\",\"payload\":{dataJson},\"timestamp\":{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()},\"sequence\":0}}]}}";
+                string body = $"{{\"events\":[{{\"type\":\"{eventType}\",\"data\":{dataJson}}}]}}";
+                await PostRequest(url, body);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[OGHubBridge] Event send failed: {e.Message}");
+            }
+        }
 
-                using var request = new UnityWebRequest(url, "POST");
+        private async Task<string> PostRequest(string url, string body)
+        {
+            using var request = new UnityWebRequest(url, "POST");
+            byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
+            request.uploadHandler = new UploadHandlerRaw(bodyBytes);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
+            if (!string.IsNullOrEmpty(SessionToken))
                 request.SetRequestHeader("Authorization", $"Bearer {SessionToken}");
-                request.SetRequestHeader("Content-Type", "application/json");
-                request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
-                request.downloadHandler = new DownloadHandlerBuffer();
+            request.timeout = (int)HTTP_TIMEOUT;
 
-                var op = request.SendWebRequest();
-                while (!op.isDone) await Task.Yield();
+            var op = request.SendWebRequest();
+            while (!op.isDone)
+                await Task.Yield();
 
-                if (request.result != UnityWebRequest.Result.Success)
+            if (request.result == UnityWebRequest.Result.Success)
+                return request.downloadHandler.text;
+
+            Debug.LogWarning($"[OGHubBridge] HTTP {request.responseCode}: {request.error}");
+            return null;
+        }
+
+        private GhostData ParseGhostData(GhostDataJson json)
+        {
+            try
+            {
+                var inputs = new List<TickInput>();
+                if (json.inputTimeline != null)
                 {
-                    Debug.LogWarning($"[OGHub] ReportEvent failed: {request.error}");
+                    foreach (var entry in json.inputTimeline)
+                    {
+                        inputs.Add(new TickInput(entry.tick, (InputAction)entry.action));
+                    }
+                }
+                return new GhostData
+                {
+                    Seed = long.Parse(json.seed),
+                    Inputs = inputs,
+                    Duration = json.duration,
+                    PlayerName = json.playerName,
+                    Score = json.score
+                };
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[OGHubBridge] Ghost parse failed: {e.Message}");
+                return null;
+            }
+        }
+
+        private string SerializeInputTimeline(IReadOnlyList<TickInput> inputs)
+        {
+            var sb = new StringBuilder("[");
+            for (int i = 0; i < inputs.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                sb.Append($"{{\"tick\":{inputs[i].Tick},\"action\":{(byte)inputs[i].Action}}}");
+            }
+            sb.Append(']');
+            return sb.ToString();
+        }
+
+        private void CacheSubmission(string body)
+        {
+            PlayerPrefs.SetString("CachedSubmission_SessionId", SessionId);
+            PlayerPrefs.SetString("CachedSubmission_Body", body);
+            PlayerPrefs.Save();
+            Debug.Log("[OGHubBridge] Score cached for retry on next launch");
+        }
+
+        private async void RetryCachedSubmission()
+        {
+            string cachedSessionId = PlayerPrefs.GetString("CachedSubmission_SessionId", "");
+            string cachedBody = PlayerPrefs.GetString("CachedSubmission_Body", "");
+
+            if (string.IsNullOrEmpty(cachedSessionId) || string.IsNullOrEmpty(cachedBody))
+                return;
+
+            Debug.Log("[OGHubBridge] Retrying cached score submission...");
+            try
+            {
+                string url = $"{_apiEndpoint}/sessions/{cachedSessionId}/end";
+                string response = await PostRequest(url, cachedBody);
+                if (response != null)
+                {
+                    PlayerPrefs.DeleteKey("CachedSubmission_SessionId");
+                    PlayerPrefs.DeleteKey("CachedSubmission_Body");
+                    PlayerPrefs.Save();
+                    Debug.Log("[OGHubBridge] Cached submission succeeded");
                 }
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[OGHub] ReportEvent exception: {e.Message}");
+                Debug.LogWarning($"[OGHubBridge] Cached retry failed: {e.Message}");
             }
         }
 
-        [Serializable]
-        private class EndSessionPayload
+        private Dictionary<string, string> ParseQuery(string query)
+        {
+            var result = new Dictionary<string, string>();
+            if (string.IsNullOrEmpty(query)) return result;
+
+            query = query.TrimStart('?');
+            foreach (var pair in query.Split('&'))
+            {
+                var kv = pair.Split('=');
+                if (kv.Length == 2)
+                    result[Uri.UnescapeDataString(kv[0])] = Uri.UnescapeDataString(kv[1]);
+            }
+            return result;
+        }
+
+        private void OnDestroy()
+        {
+            Application.deepLinkActivated -= OnDeepLinkActivated;
+            ServiceLocator.Unregister<OGHubBridge>();
+        }
+
+        [Serializable] private class ValidatePayload { public string gameId; }
+        [Serializable] private class ValidateResponse { public GhostDataJson ghostData; }
+
+        [Serializable] public class GhostDataJson
+        {
+            public string seed;
+            public InputEntry[] inputTimeline;
+            public int duration;
+            public string playerName;
+            public int score;
+        }
+
+        [Serializable] public class InputEntry
+        {
+            public int tick;
+            public int action;
+        }
+
+        [Serializable] private class EndSessionPayload
         {
             public int score;
             public ReplayPayload replayData;
         }
 
-        [Serializable]
-        private class ReplayPayload
+        [Serializable] private class ReplayPayload
         {
             public string seed;
             public string inputTimeline;
             public int duration;
         }
+    }
 
-        /// <summary>
-        /// Ends the session, submitting the score and replay data via POST /api/sessions/{SessionId}/end.
-        /// </summary>
-        public async Task<bool> EndSession(Core.ReplayData replayData)
-        {
-            if (string.IsNullOrEmpty(SessionId)) throw new Exception("SessionId not set");
+    public class GhostData
+    {
+        public long Seed;
+        public List<TickInput> Inputs;
+        public int Duration;
+        public string PlayerName;
+        public int Score;
+    }
 
-            Debug.Log($"[OGHub] Submitting Run. Score: {replayData.FinalScore}, Tick: {replayData.FinalTick}");
+    [Serializable]
+    public class SessionOutcome
+    {
+        public bool accepted;
+        public int score;
+        public int rank;
+        public NearMissInfo nearMiss;
+    }
 
-            string url = $"{_apiEndpoint}/sessions/{SessionId}/end";
-            var payload = new EndSessionPayload
-            {
-                score = replayData.FinalScore,
-                replayData = new ReplayPayload
-                {
-                    seed = replayData.Seed ?? "",
-                    inputTimeline = "[]",
-                    duration = replayData.FinalTick
-                }
-            };
-
-            string body = JsonUtility.ToJson(payload);
-
-            using var request = new UnityWebRequest(url, "POST");
-            request.SetRequestHeader("Authorization", $"Bearer {SessionToken}");
-            request.SetRequestHeader("Content-Type", "application/json");
-            request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
-            request.downloadHandler = new DownloadHandlerBuffer();
-
-            var op = request.SendWebRequest();
-            while (!op.isDone) await Task.Yield();
-
-            if (request.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogError($"[OGHub] EndSession failed: {request.error} — {request.downloadHandler.text}");
-                return false;
-            }
-
-            Debug.Log($"[OGHub] EndSession response: {request.downloadHandler.text}");
-            return true;
-        }
-
-        /// <summary>
-        /// Fetches ghost (replay) data for a given challenge via GET /api/ghosts/{challengeId}/top.
-        /// </summary>
-        public async Task<Core.ReplayData> RequestGhostData(string challengeId, string type = "personal_best")
-        {
-            Debug.Log($"[OGHub] Fetching ghost '{type}' for challenge {challengeId}...");
-
-            string url = $"{_apiEndpoint}/ghosts/{challengeId}/top";
-
-            using var request = UnityWebRequest.Get(url);
-            request.SetRequestHeader("Authorization", $"Bearer {SessionToken}");
-
-            var op = request.SendWebRequest();
-            while (!op.isDone) await Task.Yield();
-
-            if (request.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning($"[OGHub] RequestGhostData failed: {request.error}");
-                return null;
-            }
-
-            Debug.Log($"[OGHub] Ghost data: {request.downloadHandler.text}");
-            // Parse response into ReplayData — depends on game-specific deserialization
-            return null;
-        }
+    [Serializable]
+    public class NearMissInfo
+    {
+        public string message;
+        public int targetRank;
+        public int targetScore;
+        public int difference;
+        public float percentile;
     }
 }
