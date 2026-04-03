@@ -1,58 +1,103 @@
+// Assets/Scripts/Rendering/RunnerRenderer.cs
 using UnityEngine;
 using NeonRunner.Core;
+using NeonRunner.Events;
 
-namespace NeonRunner.Game
+namespace NeonRunner.Rendering
 {
-    /// <summary>
-    /// Purely visual component. Translates deterministic state into smooth Unity transforms.
-    /// </summary>
-    public class RunnerRenderer : MonoBehaviour
+    public sealed class RunnerRenderer : MonoBehaviour
     {
+        [Header("References")]
         [SerializeField] private Animator _animator;
-        [SerializeField] private ParticleSystem _slideSparks;
-        [SerializeField] private ParticleSystem _trailGlow;
+        [SerializeField] private Renderer _meshRenderer;
 
-        private RunnerState _previousState;
-        
-        // Hashes for Animator parameters
+        [Header("Combo Glow")]
+        [SerializeField] private Color _baseColor = new(0f, 1f, 1f, 1f);
+        [SerializeField] private Color _maxComboColor = new(1f, 0f, 1f, 1f);
+        [SerializeField] private float _maxGlowIntensity = 3f;
+
         private static readonly int JumpHash = Animator.StringToHash("Jump");
         private static readonly int SlideHash = Animator.StringToHash("Slide");
         private static readonly int SpeedHash = Animator.StringToHash("Speed");
 
+        private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
+
+        private Material _material;
+        private RunnerState _previousState;
+        private VerticalState _lastVerticalState;
+
+        private void Awake()
+        {
+            if (_meshRenderer != null)
+                _material = _meshRenderer.material;
+        }
+
         public void UpdateVisuals(RunnerState currentState, float alpha)
         {
-            // 1. Interpolate Position
-            // We interpolate between previous simulation tick and current simulation tick
-            // to run smoothly at 144Hz monitors even though simulation is 60Hz.
-            Vector3 prevPos = _previousState.Position.ToVector3();
-            Vector3 currPos = currentState.Position.ToVector3();
-            transform.position = Vector3.Lerp(prevPos, currPos, alpha);
+            float lerpX = Mathf.Lerp(
+                (float)_previousState.Position.X,
+                (float)currentState.Position.X,
+                alpha);
+            float lerpY = Mathf.Lerp(
+                (float)_previousState.Position.Y,
+                (float)currentState.Position.Y,
+                alpha);
+            float lerpZ = Mathf.Lerp(
+                (float)_previousState.Position.Z,
+                (float)currentState.Position.Z,
+                alpha);
 
-            // 2. Animation States
-            _animator.SetFloat(SpeedHash, currentState.Speed.ToFloat() * 10f);
+            transform.position = new Vector3(lerpX, lerpY, lerpZ);
 
-            // Only trigger jump precisely when the state changes
-            if (currentState.Vertical == VerticalState.Jumping && _previousState.Vertical != VerticalState.Jumping)
+            if (_animator != null)
             {
-                _animator.SetTrigger(JumpHash);
+                _animator.SetBool(JumpHash, currentState.Vertical == VerticalState.Jumping);
+                _animator.SetBool(SlideHash, currentState.Vertical == VerticalState.Sliding);
+                _animator.SetFloat(SpeedHash, (float)currentState.Speed);
             }
 
-            // Only trigger slide when state changes
-            if (currentState.Vertical == VerticalState.Sliding && _previousState.Vertical != VerticalState.Sliding)
+            if (currentState.Vertical != _lastVerticalState)
             {
-                _animator.SetTrigger(SlideHash);
-                _slideSparks.Play();
-            }
-            else if (currentState.Vertical != VerticalState.Sliding)
-            {
-                _slideSparks.Stop();
+                switch (currentState.Vertical)
+                {
+                    case VerticalState.Jumping:
+                        GameEvents.FireJump();
+                        break;
+                    case VerticalState.Sliding:
+                        GameEvents.FireSlideStart();
+                        break;
+                    case VerticalState.Running:
+                        if (_lastVerticalState == VerticalState.Jumping)
+                            GameEvents.FireLand();
+                        else if (_lastVerticalState == VerticalState.Sliding)
+                            GameEvents.FireSlideEnd();
+                        break;
+                }
+                _lastVerticalState = currentState.Vertical;
             }
 
-            // VFX: Trial Glow turns intense when combo is high
-            var main = _trailGlow.main;
-            // E.g., make it brighter based on combo, hooked into SimulationManager snapshop
+            if (currentState.TargetLane != _previousState.TargetLane)
+            {
+                int dir = currentState.TargetLane > _previousState.TargetLane ? 1 : -1;
+                GameEvents.FireLaneSwitch(new LaneSwitchArgs(dir));
+            }
 
             _previousState = currentState;
+        }
+
+        public void UpdateComboGlow(int comboCount, float maxCombo)
+        {
+            if (_material == null) return;
+            float t = maxCombo > 0 ? Mathf.Clamp01(comboCount / maxCombo) : 0f;
+            Color emissionColor = Color.Lerp(_baseColor, _maxComboColor, t);
+            float intensity = Mathf.Lerp(1f, _maxGlowIntensity, t);
+            _material.SetColor(EmissionColorId, emissionColor * intensity);
+        }
+
+        private void OnDestroy()
+        {
+            if (_material != null)
+                Destroy(_material);
         }
     }
 }
