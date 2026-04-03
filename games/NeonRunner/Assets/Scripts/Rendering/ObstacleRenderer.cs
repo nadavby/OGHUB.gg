@@ -1,72 +1,74 @@
+// Assets/Scripts/Rendering/ObstacleRenderer.cs
 using System.Collections.Generic;
 using UnityEngine;
 using NeonRunner.Core;
+using NeonRunner.Game;
 
 namespace NeonRunner.Rendering
 {
-    /// <summary>
-    /// Renders obstacles dynamically based on the pure simulation data.
-    /// Pulls from ObjectPool. Uses pure interpolation just like RunnerRenderer.
-    /// </summary>
-    public class ObstacleRenderer : MonoBehaviour
+    public sealed class ObstacleRenderer : MonoBehaviour
     {
-        private class VisualObstacle
+        private readonly Dictionary<int, GameObject> _activeVisuals = new();
+        private readonly List<int> _staleKeysBuffer = new();
+
+        public void UpdateObstacles(IReadOnlyList<ObstacleData> obstacles)
         {
-            public int LogicId;
-            public ObstacleType Type;
-            public GameObject VisualObj;
-        }
-
-        private readonly Dictionary<int, VisualObstacle> _activeVisuals = new Dictionary<int, VisualObstacle>();
-        private readonly List<int> _staleKeysBuffer = new List<int>(); // No GC alloc
-
-        private void LateUpdate()
-        {
-            if (Game.GameManager.Instance == null) return;
-            
-            var obstacles = Game.GameManager.Instance.GetActiveObstacles();
-
-            // 1. Mark all as stale, then we'll remove ones that are active
             _staleKeysBuffer.Clear();
-            _staleKeysBuffer.AddRange(_activeVisuals.Keys);
+            foreach (var kvp in _activeVisuals)
+                _staleKeysBuffer.Add(kvp.Key);
 
-            // 2. Add new or update existing
             for (int i = 0; i < obstacles.Count; i++)
             {
-                var simObs = obstacles[i];
-                if (!simObs.IsActive) continue;
+                var obs = obstacles[i];
+                if (!obs.IsActive) continue;
 
-                if (_activeVisuals.TryGetValue(simObs.Id, out VisualObstacle vo))
+                _staleKeysBuffer.Remove(obs.Id);
+
+                if (!_activeVisuals.TryGetValue(obs.Id, out var visual))
                 {
-                    _staleKeysBuffer.Remove(simObs.Id);
-                    
-                    // Simple position update (no lerp here since obstacles don't move in Z, 
-                    // only runner moves! But if they did, we would lerp).
-                    vo.VisualObj.transform.position = simObs.Position.ToVector3();
+                    var pool = ServiceLocator.Get<ObjectPool>();
+                    if (pool == null) continue;
+                    visual = pool.Get(obs.Type);
+                    _activeVisuals[obs.Id] = visual;
                 }
-                else
-                {
-                    // Spawn new visual
-                    var go = Game.ObjectPool.Instance.Get(simObs.Type);
-                    go.transform.position = simObs.Position.ToVector3();
-                    // Optional: set custom material colors dynamically for risk tunnels etc.
-                    
-                    _activeVisuals[simObs.Id] = new VisualObstacle
-                    {
-                        LogicId = simObs.Id,
-                        Type = simObs.Type,
-                        VisualObj = go
-                    };
-                }
+
+                visual.transform.position = new Vector3(
+                    (float)obs.Position.X,
+                    (float)obs.Position.Y,
+                    (float)obs.Position.Z
+                );
             }
 
-            // 3. Return stale (despawned) to pool
-            foreach (int id in _staleKeysBuffer)
+            for (int i = 0; i < _staleKeysBuffer.Count; i++)
             {
-                var vo = _activeVisuals[id];
-                Game.ObjectPool.Instance.Return(vo.VisualObj, vo.Type);
-                _activeVisuals.Remove(id);
+                int id = _staleKeysBuffer[i];
+                if (_activeVisuals.TryGetValue(id, out var visual))
+                {
+                    var pool = ServiceLocator.Get<ObjectPool>();
+                    pool?.Return(visual, GetObstacleType(visual));
+                    _activeVisuals.Remove(id);
+                }
             }
+        }
+
+        private ObstacleType GetObstacleType(GameObject obj)
+        {
+            if (obj.name.StartsWith("LowBarrier")) return ObstacleType.LowBarrier;
+            if (obj.name.StartsWith("HighBarrier")) return ObstacleType.HighBarrier;
+            if (obj.name.StartsWith("FullBlock")) return ObstacleType.FullBlock;
+            if (obj.name.StartsWith("SkillGate")) return ObstacleType.SkillGate;
+            if (obj.name.StartsWith("RiskTunnel")) return ObstacleType.RiskTunnel;
+            return ObstacleType.FullBlock;
+        }
+
+        public void ClearAll()
+        {
+            var pool = ServiceLocator.Get<ObjectPool>();
+            foreach (var kvp in _activeVisuals)
+            {
+                pool?.Return(kvp.Value, GetObstacleType(kvp.Value));
+            }
+            _activeVisuals.Clear();
         }
     }
 }
