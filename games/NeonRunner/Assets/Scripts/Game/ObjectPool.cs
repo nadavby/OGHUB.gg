@@ -1,29 +1,24 @@
+// Assets/Scripts/Game/ObjectPool.cs
 using System.Collections.Generic;
 using UnityEngine;
 using NeonRunner.Core;
 
 namespace NeonRunner.Game
 {
-    /// <summary>
-    /// Simple visual object pool for mobile performance.
-    /// Does NOT affect simulation determinism.
-    /// </summary>
-    public class ObjectPool : MonoBehaviour
+    public sealed class ObjectPool : MonoBehaviour
     {
-        public static ObjectPool Instance { get; private set; }
-
+        [Header("Obstacle Prefabs")]
         [SerializeField] private GameObject _lowBarrierPrefab;
         [SerializeField] private GameObject _highBarrierPrefab;
         [SerializeField] private GameObject _fullBlockPrefab;
         [SerializeField] private GameObject _skillGatePrefab;
         [SerializeField] private GameObject _riskTunnelPrefab;
 
-        private readonly Dictionary<ObstacleType, Queue<GameObject>> _pools = new Dictionary<ObstacleType, Queue<GameObject>>();
+        private readonly Dictionary<ObstacleType, Queue<GameObject>> _pools = new();
 
         private void Awake()
         {
-            Instance = this;
-
+            ServiceLocator.Register(this);
             _pools[ObstacleType.LowBarrier] = new Queue<GameObject>();
             _pools[ObstacleType.HighBarrier] = new Queue<GameObject>();
             _pools[ObstacleType.FullBlock] = new Queue<GameObject>();
@@ -33,38 +28,45 @@ namespace NeonRunner.Game
 
         public GameObject Get(ObstacleType type)
         {
-            if (_pools.TryGetValue(type, out Queue<GameObject> queue) && queue.Count > 0)
+            if (_pools[type].Count > 0)
             {
-                var obj = queue.Dequeue();
+                var obj = _pools[type].Dequeue();
                 obj.SetActive(true);
                 return obj;
             }
 
-            // Instantiate new if pool empty
-            GameObject prefab = GetPrefab(type);
-            var newObj = Instantiate(prefab, transform);
-            return newObj;
+            var prefab = GetPrefab(type);
+            if (prefab == null) return null;
+
+            var instance = Instantiate(prefab, transform);
+            instance.name = $"{type}_{instance.GetInstanceID()}";
+            return instance;
         }
 
         public void Return(GameObject obj, ObstacleType type)
         {
+            if (obj == null) return;
             obj.SetActive(false);
-            if (_pools.TryGetValue(type, out Queue<GameObject> queue))
-            {
-                queue.Enqueue(obj);
-            }
+            obj.transform.SetParent(transform);
+            _pools[type].Enqueue(obj);
         }
 
         private GameObject GetPrefab(ObstacleType type)
         {
-            switch (type)
+            return type switch
             {
-                case ObstacleType.LowBarrier: return _lowBarrierPrefab;
-                case ObstacleType.HighBarrier: return _highBarrierPrefab;
-                case ObstacleType.SkillGate: return _skillGatePrefab;
-                case ObstacleType.RiskTunnel: return _riskTunnelPrefab;
-                default: return _fullBlockPrefab;
-            }
+                ObstacleType.LowBarrier => _lowBarrierPrefab,
+                ObstacleType.HighBarrier => _highBarrierPrefab,
+                ObstacleType.FullBlock => _fullBlockPrefab,
+                ObstacleType.SkillGate => _skillGatePrefab,
+                ObstacleType.RiskTunnel => _riskTunnelPrefab,
+                _ => _fullBlockPrefab
+            };
+        }
+
+        private void OnDestroy()
+        {
+            ServiceLocator.Unregister<ObjectPool>();
         }
     }
 }
