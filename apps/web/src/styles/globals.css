@@ -1,79 +1,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
-/* ═══════════════════════════════════════════════════════════════
-   OGHUB — NEON-NOIR DESIGN LANGUAGE SYSTEM
-   "Slightly dangerous, elite, and hyper-addictive"
-   
-   Philosophy: Las Vegas meets Cyberpunk. No clocks, no exits,
-   constant dopamine. Every interaction feels like a win.
-   ═══════════════════════════════════════════════════════════════ */
+/* ===================================================================
+   OGHUB — CLEAN DARK PREMIUM DESIGN SYSTEM
+   "Premium skill-based competition. Put your money where your mouth is."
 
-/* ─── Root Design Tokens ─────────────────────────────────────── */
+   Philosophy: Clean, confident, dark. Fintech trust meets esports energy.
+   No manufactured urgency. Real activity, real stakes, real results.
+   =================================================================== */
+
+/* --- Root Design Tokens ------------------------------------------ */
 
 :root {
-  /* Core Blacks — The Void */
-  --void: #050507;
-  --abyss: #0A0A0F;
-  --depth: #0E0E16;
-  --surface: #12121E;
-  --surface-elevated: #18182A;
-  --surface-hover: #1E1E32;
-  --surface-active: #24243C;
+  /* Backgrounds */
+  --bg: #0D0D0D;
+  --surface: #161616;
+  --surface-elevated: #1E1E1E;
+  --surface-active: #252525;
 
-  /* Neon Palette — The Glow */
-  --neon-purple: #8B5CF6;
-  --neon-purple-bright: #A78BFA;
-  --neon-purple-dim: #6D28D9;
-  --neon-purple-glow: rgba(139, 92, 246, 0.4);
-  
-  --toxic-green: #22D55A;
-  --toxic-green-bright: #4ADE80;
-  --toxic-green-dim: #16A34A;
-  --toxic-green-glow: rgba(34, 213, 90, 0.4);
+  /* Borders */
+  --border: rgba(255,255,255,0.08);
+  --border-hover: rgba(255,255,255,0.15);
 
-  --electric-blue: #3B82F6;
-  --electric-blue-glow: rgba(59, 130, 246, 0.3);
+  /* Primary (Orange — Action) */
+  --primary: #F97316;
+  --primary-hover: #FB923C;
+  --primary-dim: rgba(249,115,22,0.15);
 
-  --hot-pink: #EC4899;
-  --hot-pink-glow: rgba(236, 72, 153, 0.3);
-
-  --burnout-orange: #F59E0B;
-  --burnout-orange-glow: rgba(245, 158, 11, 0.3);
-
-  /* Gold & Wealth */
-  --gold: #FFD700;
-  --gold-bright: #FFED4A;
-  --gold-dim: #D4A017;
-  --gold-glow: rgba(255, 215, 0, 0.3);
-  --platinum: #E5E5E5;
-
-  /* Danger / Loss */
+  /* Semantic Colors */
+  --win: #10B981;
+  --money: #F59E0B;
   --danger: #EF4444;
-  --danger-glow: rgba(239, 68, 68, 0.3);
-
-  /* Success / Win */
-  --win: #22D55A;
-  --win-glow: rgba(34, 213, 90, 0.5);
+  --trust: #3B82F6;
 
   /* Text Hierarchy */
-  --text-primary: #F5F5F7;
-  --text-secondary: #A1A1B5;
-  --text-muted: #6B6B80;
-  --text-glow: #FFFFFF;
-
-  /* Borders & Separators */
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-glow: rgba(139, 92, 246, 0.3);
-  --border-gold: rgba(255, 215, 0, 0.3);
-
-  /* Gradients */
-  --gradient-main: linear-gradient(135deg, #8B5CF6 0%, #EC4899 50%, #F59E0B 100%);
-  --gradient-win: linear-gradient(135deg, #22D55A 0%, #4ADE80 100%);
-  --gradient-danger: linear-gradient(135deg, #EF4444 0%, #F97316 100%);
-  --gradient-gold: linear-gradient(135deg, #FFD700 0%, #F59E0B 50%, #D4A017 100%);
-  --gradient-dark: linear-gradient(180deg, #0A0A0F 0%, #12121E 100%);
-  --gradient-card: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(236, 72, 153, 0.05) 100%);
-  --gradient-shimmer: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
+  --text-primary: #EBEBEB;
+  --text-secondary: #8A8A8A;
+  --text-muted: #505050;
 
   /* Typography */
   --font-display: 'Outfit', sans-serif;
@@ -95,19 +57,14 @@
   --radius-xl: 24px;
   --radius-full: 9999px;
 
-  /* Shadows — Neon Glow */
-  --shadow-neon: 0 0 20px rgba(139, 92, 246, 0.15), 0 0 60px rgba(139, 92, 246, 0.05);
-  --shadow-neon-strong: 0 0 30px rgba(139, 92, 246, 0.3), 0 0 80px rgba(139, 92, 246, 0.1);
-  --shadow-gold: 0 0 20px rgba(255, 215, 0, 0.2), 0 0 60px rgba(255, 215, 0, 0.05);
-  --shadow-win: 0 0 30px rgba(34, 213, 90, 0.3), 0 0 80px rgba(34, 213, 90, 0.1);
-  --shadow-danger: 0 0 20px rgba(239, 68, 68, 0.2);
-  --shadow-deep: 0 20px 50px rgba(0, 0, 0, 0.5);
-  --shadow-card: 0 4px 30px rgba(0, 0, 0, 0.3);
+  /* Shadows (clean, no neon glow) */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.5);
 
   /* Transitions */
-  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-spring: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
 
   /* Z-indexes */
   --z-base: 1;
@@ -117,7 +74,7 @@
   --z-toast: 300;
 }
 
-/* ─── Reset & Foundation ─────────────────────────────────────── */
+/* --- Reset & Foundation ------------------------------------------ */
 
 *, *::before, *::after {
   margin: 0;
@@ -135,7 +92,7 @@ html {
 
 body {
   font-family: var(--font-body);
-  background: var(--void);
+  background: var(--bg);
   color: var(--text-primary);
   min-height: 100vh;
   min-height: 100dvh;
@@ -143,39 +100,16 @@ body {
   line-height: 1.5;
 }
 
-/* Ambient background pattern */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: 
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(139, 92, 246, 0.12) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(236, 72, 153, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse 40% 30% at 10% 80%, rgba(34, 213, 90, 0.04) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Noise texture overlay */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.5;
-}
+/* No ambient backgrounds, no noise textures */
 
 a {
-  color: var(--neon-purple-bright);
+  color: var(--primary);
   text-decoration: none;
   transition: var(--transition-fast);
 }
 
 a:hover {
-  color: var(--text-glow);
-  text-shadow: 0 0 8px var(--neon-purple-glow);
+  color: var(--primary-hover);
 }
 
 img {
@@ -198,10 +132,9 @@ input, select, textarea {
 /* Hide scrollbars but keep scrolling */
 ::-webkit-scrollbar { width: 0; height: 0; }
 
-/* Selection color */
 ::selection {
-  background: rgba(139, 92, 246, 0.3);
-  color: var(--text-glow);
+  background: rgba(249, 115, 22, 0.3);
+  color: var(--text-primary);
 }
 
 /* ─── App Shell ──────────────────────────────────────────────── */
