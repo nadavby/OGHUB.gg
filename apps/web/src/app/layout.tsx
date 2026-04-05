@@ -6,9 +6,9 @@ import WalletBadge from '@/components/WalletBadge';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
-  title: 'OGHUB — Skill-Based Gaming Hub',
-  description: 'Discover, compete, and earn in the ultimate skill-based gaming platform.',
-  keywords: 'gaming, competitive, skill-based, esports, mobile games',
+  title: 'OGHUB — Skill-Based Competition Platform',
+  description: 'Create rooms, set stakes, compete for real money. Premium skill-based competition.',
+  keywords: 'gaming, competitive, skill-based, esports, mobile games, competition',
 };
 
 export const viewport: Viewport = {
@@ -16,7 +16,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#0a0b14',
+  themeColor: '#0D0D0D',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -28,8 +28,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <ErrorBoundary section="header">
               <header className="app-header">
                 <div className="app-header-row">
-                  <span className="app-logo">OGHUB</span>
-                  <WalletBadge />
+                  <span className="app-logo">
+                    <span className="app-logo-o">O</span>GHUB
+                  </span>
+                  <div className="header-right">
+                    <WalletBadge />
+                    <div className="header-avatar">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </header>
             </ErrorBoundary>

@@ -137,7 +137,7 @@ input, select, textarea {
   color: var(--text-primary);
 }
 
-/* ─── App Shell ──────────────────────────────────────────────── */
+/* --- App Shell --------------------------------------------------- */
 
 .app-shell {
   position: relative;
@@ -152,11 +152,11 @@ input, select, textarea {
 
 .app-shell > main {
   flex: 1;
-  padding-bottom: 80px; /* bottom nav */
-  padding-top: 60px;    /* header */
+  padding-bottom: 80px;
+  padding-top: 60px;
 }
 
-/* ─── Header ─────────────────────────────────────────────────── */
+/* --- Header ------------------------------------------------------ */
 
 .app-header {
   position: fixed;
@@ -166,10 +166,10 @@ input, select, textarea {
   width: 100%;
   max-width: 480px;
   z-index: var(--z-sticky);
-  background: rgba(5, 5, 7, 0.85);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(13, 13, 13, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
 }
 
 .app-header-row {
@@ -182,17 +182,52 @@ input, select, textarea {
 
 .app-logo {
   font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  background: var(--gradient-main);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 0 12px rgba(139, 92, 246, 0.3));
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
 }
 
-/* ─── Wallet Badge (Header) ──────────────────────────────────── */
+.app-logo-o {
+  position: relative;
+}
+
+.app-logo-o::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: -1px;
+  width: 5px;
+  height: 5px;
+  background: var(--primary);
+  border-radius: 50%;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.header-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: var(--transition-fast);
+}
+
+.header-avatar:hover {
+  border-color: var(--border-hover);
+  color: var(--text-secondary);
+}
+
+/* --- Wallet Badge (Header) --------------------------------------- */
 
 .wallet-badge {
   display: flex;
@@ -200,30 +235,26 @@ input, select, textarea {
   gap: 6px;
   padding: 6px 14px;
   background: var(--surface);
-  border: 1px solid var(--border-gold);
+  border: 1px solid var(--border);
   border-radius: var(--radius-full);
   font-family: var(--font-mono);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.85rem;
-  color: var(--gold);
+  color: var(--money);
   text-decoration: none;
   transition: var(--transition-fast);
-  box-shadow: var(--shadow-gold);
 }
 
 .wallet-badge:hover {
-  background: var(--surface-hover);
-  border-color: var(--gold);
-  transform: scale(1.02);
-  box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+  border-color: var(--border-hover);
+  color: var(--money);
 }
 
-.wallet-badge .coin-icon {
-  font-size: 1rem;
-  filter: drop-shadow(0 0 4px var(--gold-glow));
+.wallet-amount {
+  font-variant-numeric: tabular-nums;
 }
 
-/* ─── Bottom Navigation ──────────────────────────────────────── */
+/* --- Bottom Navigation ------------------------------------------- */
 
 .bottom-nav {
   position: fixed;
@@ -233,23 +264,11 @@ input, select, textarea {
   width: 100%;
   max-width: 480px;
   z-index: var(--z-sticky);
-  background: rgba(5, 5, 7, 0.92);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-top: 1px solid var(--border-subtle);
+  background: rgba(13, 13, 13, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-/* Glow line on top of nav */
-.bottom-nav::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 10%;
-  right: 10%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--neon-purple), transparent);
-  opacity: 0.5;
 }
 
 .nav-items {
@@ -263,8 +282,8 @@ input, select, textarea {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  font-size: 0.65rem;
-  font-weight: 600;
+  font-size: 0.6875rem;
+  font-weight: 500;
   color: var(--text-muted);
   text-decoration: none;
   padding: 4px 12px;
@@ -272,9 +291,15 @@ input, select, textarea {
   position: relative;
 }
 
-.nav-item .nav-icon {
-  font-size: 1.3rem;
-  transition: var(--transition-fast);
+.nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+}
+
+.nav-label {
+  font-family: var(--font-body);
 }
 
 .nav-item:hover {
@@ -282,25 +307,19 @@ input, select, textarea {
 }
 
 .nav-item.active {
-  color: var(--neon-purple-bright);
+  color: var(--primary);
 }
 
 .nav-item.active::before {
   content: '';
   position: absolute;
-  top: -9px;
+  top: -8px;
   left: 50%;
   transform: translateX(-50%);
   width: 24px;
-  height: 3px;
-  background: var(--neon-purple);
+  height: 2px;
+  background: var(--primary);
   border-radius: var(--radius-full);
-  box-shadow: 0 0 12px var(--neon-purple-glow);
-}
-
-.nav-item.active .nav-icon {
-  filter: drop-shadow(0 0 8px var(--neon-purple-glow));
-  transform: scale(1.1);
 }
 
 /* ─── Game Cards ─────────────────────────────────────────────── */

@@ -18,8 +18,7 @@ export default function WalletBadge() {
 
   return (
     <Link href="/wallet" className="wallet-badge">
-      <span className="coin-icon">$</span>
-      <span>{wallet ? parseFloat(wallet.balance).toFixed(2) : '—'}</span>
+      <span className="wallet-amount">${wallet ? parseFloat(wallet.balance).toFixed(2) : '0.00'}</span>
     </Link>
   );
 }
