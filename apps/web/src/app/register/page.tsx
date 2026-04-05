@@ -34,12 +34,12 @@ export default function RegisterPage() {
     <div className="auth-page">
       <motion.div
         className="auth-card"
-        initial={{ opacity: 0, y: 30, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
       >
         <h1 className="auth-title">Join OGHUB</h1>
-        <p className="auth-subtitle">Create your gaming account</p>
+        <p className="auth-subtitle">Create your competitive account</p>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -59,7 +59,7 @@ export default function RegisterPage() {
             <input
               className="form-input"
               type="text"
-              placeholder="ProGamer99"
+              placeholder="Choose a username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
@@ -72,7 +72,7 @@ export default function RegisterPage() {
             <input
               className="form-input"
               type="password"
-              placeholder="••••••••"
+              placeholder="8+ characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -82,16 +82,16 @@ export default function RegisterPage() {
 
           {error && (
             <motion.p
-              initial={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 16 }}
+              className="form-error"
             >
               {error}
             </motion.p>
           )}
 
           <button className="btn-primary" type="submit" disabled={loading}>
-            {loading ? '⏳ Creating Account...' : '🚀 Create Account'}
+            {loading ? 'Creating Account...' : 'Create Account'}
           </button>
         </form>
 

@@ -33,12 +33,12 @@ export default function LoginPage() {
     <div className="auth-page">
       <motion.div
         className="auth-card"
-        initial={{ opacity: 0, y: 30, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
       >
         <h1 className="auth-title">Welcome Back</h1>
-        <p className="auth-subtitle">Sign in to your gaming account</p>
+        <p className="auth-subtitle">Sign in to your account</p>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -58,7 +58,7 @@ export default function LoginPage() {
             <input
               className="form-input"
               type="password"
-              placeholder="••••••••"
+              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -67,21 +67,21 @@ export default function LoginPage() {
 
           {error && (
             <motion.p
-              initial={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 16 }}
+              className="form-error"
             >
               {error}
             </motion.p>
           )}
 
           <button className="btn-primary" type="submit" disabled={loading}>
-            {loading ? '⏳ Signing In...' : '⚡ Sign In'}
+            {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 
         <p className="auth-link">
-          Don't have an account? <Link href="/register">Sign Up</Link>
+          Don&apos;t have an account? <Link href="/register">Sign Up</Link>
         </p>
       </motion.div>
     </div>
