@@ -652,6 +652,297 @@ input, select, textarea {
   font-size: 0.8125rem;
 }
 
+/* --- Game Detail Page -------------------------------------------- */
+
+.game-detail {
+  /* no padding — banner is full-width */
+}
+
+.game-banner {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.game-banner-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-banner-title {
+  position: absolute;
+  bottom: var(--space-md);
+  left: var(--space-md);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+
+.game-detail-content {
+  padding: var(--space-md);
+}
+
+.game-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--space-md);
+}
+
+.game-tags {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.game-tag {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+}
+
+.game-section {
+  margin-bottom: var(--space-lg);
+}
+
+/* --- Room Cards -------------------------------------------------- */
+
+.rooms-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.room-card {
+  padding: var(--space-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast);
+}
+
+.room-card:hover {
+  border-color: var(--border-hover);
+}
+
+.room-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.room-creator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.room-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.room-username {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.room-format {
+  padding: 3px 10px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: var(--surface-elevated);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+}
+
+.room-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.room-money {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.room-fee {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--money);
+}
+
+.room-prize {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.room-spots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.room-spots-bar {
+  width: 48px;
+  height: 4px;
+  background: var(--surface-active);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.room-spots-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: var(--radius-full);
+  transition: width var(--transition-normal);
+}
+
+.room-spots-text {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.room-join-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--primary);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: white;
+  transition: background var(--transition-fast);
+}
+
+.room-join-btn:hover {
+  background: var(--primary-hover);
+}
+
+/* --- Create Room Button ------------------------------------------ */
+
+.create-room-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--primary);
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: white;
+  margin-bottom: var(--space-lg);
+  transition: background var(--transition-fast);
+}
+
+.create-room-btn:hover {
+  background: var(--primary-hover);
+}
+
+/* --- Leaderboard ------------------------------------------------- */
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast);
+}
+
+.leaderboard-row:hover {
+  border-color: var(--border-hover);
+}
+
+.lb-rank {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  min-width: 32px;
+  color: var(--text-muted);
+}
+
+.lb-rank-first {
+  color: var(--primary);
+}
+
+.lb-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.lb-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lb-score {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/* --- Game Stats Footer ------------------------------------------- */
+
+.game-stats-footer {
+  padding: var(--space-md) 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-md);
+}
+
 /* ─── Auth Pages ─────────────────────────────────────────────── */
 
 .auth-page {
