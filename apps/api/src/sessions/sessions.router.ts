@@ -6,7 +6,6 @@ import { authGuard, AuthenticatedRequest, signToken } from '../common/auth';
 import { AppError } from '../common/error-handler';
 import { validate, createSessionSchema, endSessionSchema, eventsSchema } from '../common/schemas';
 import { enhancedHmacGuard } from '../common/sdk-integrity';
-import { validateSession } from '../anticheat/fraud-engine';
 import { enqueueEvents, getBackpressure } from '../events/event-pipeline';
 
 export const sessionsRouter = Router();
@@ -261,7 +260,24 @@ sessionsRouter.post('/:id/end', enhancedHmacGuard, async (req: AuthenticatedRequ
     }
 
     // ── Anti-Cheat Validation (4-layer fraud engine) ─────
-    const fraudResult = await validateSession(session, score, replayData, req.user!.userId);
+    // Load game definition for fraud engine
+    const gameDef = await prisma.gameDefinition.findUnique({
+      where: { gameId: session.gameId },
+    });
+
+    let fraudResult;
+    if (gameDef) {
+      // Use generic fraud engine with game-specific rules
+      const { validateSessionGeneric } = await import('../anticheat/generic-fraud-engine');
+      fraudResult = await validateSessionGeneric(
+        session, score, replayData, req.user!.userId,
+        gameDef.definition as any,
+      );
+    } else {
+      // Fallback to legacy fraud engine for games without definitions
+      const { validateSession } = await import('../anticheat/fraud-engine');
+      fraudResult = await validateSession(session, score, replayData, req.user!.userId);
+    }
     const isValid = fraudResult.isValid;
 
     const result = await prisma.$transaction(async (tx) => {
