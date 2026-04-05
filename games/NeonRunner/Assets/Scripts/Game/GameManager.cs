@@ -8,6 +8,7 @@ using NeonRunner.Rendering;
 using NeonRunner.SDK;
 using NeonRunner.UI;
 using NeonRunner.VFX;
+using OGHub;
 
 namespace NeonRunner.Game
 {
@@ -56,11 +57,18 @@ namespace NeonRunner.Game
         private void Awake()
         {
             ServiceLocator.Register(this);
+
+            // Auto-setup all visuals if NeonBootstrap not already in scene
+            if (FindAnyObjectByType<Rendering.NeonBootstrap>() == null)
+            {
+                var bootstrap = new GameObject("[NeonBootstrap]");
+                bootstrap.AddComponent<Rendering.NeonBootstrap>();
+            }
         }
 
         private void Start()
         {
-            var bridge = ServiceLocator.Get<OGHubBridge>();
+            ServiceLocator.TryGet<OGHubBridge>(out var bridge);
             bool isCompetitive = bridge != null && bridge.IsCompetitive;
 
             _mode = isCompetitive ? GameMode.Competitive : GameMode.Practice;
@@ -86,30 +94,23 @@ namespace NeonRunner.Game
             }
         }
 
-        private async void StartCompetitiveFlow(OGHubBridge bridge)
+        private void StartCompetitiveFlow(OGHubBridge bridge)
         {
-            bool valid = await bridge.ValidateSession();
-            if (!valid)
+            // Set up live validation snapshot provider
+            bridge.ValidationSnapshotProvider = () =>
             {
-                Debug.LogError("[GameManager] Session validation failed");
-                return;
-            }
-
-            if (bridge.LoadedGhost != null)
-            {
-                _ghostManager = new GhostManager();
-                var ghost = bridge.LoadedGhost;
-                var replayData = new ReplayData
+                if (_simulation == null) return new Dictionary<string, object>();
+                var snap = _simulation.GetSnapshot();
+                return new Dictionary<string, object>
                 {
-                    Seed = ghost.Seed,
-                    Modifiers = _config.Modifiers,
-                    StartingLives = _config.StartingLives,
-                    Inputs = ghost.Inputs
+                    { "current_score", snap.Score },
+                    { "current_lane", (int)snap.Runner.Lane },
+                    { "player_alive", !_simulation.IsGameOver },
+                    { "current_tick", snap.Runner.CurrentTick },
                 };
-                _ghostManager.AddGhost(replayData, ghost.PlayerName);
-            }
+            };
 
-            bridge.MarkInProgress();
+            bridge.StartGameplay();
             InitializeAndCountdown();
         }
 
@@ -131,21 +132,40 @@ namespace NeonRunner.Game
 
             ApplyQualityTier();
 
-            _countdownUI.StartCountdown(() =>
+            if (_countdownUI != null)
             {
+                _countdownUI.StartCountdown(() =>
+                {
+                    _isRunning = true;
+                    _hasStarted = true;
+                    GameEvents.FireGameStart();
+                });
+            }
+            else
+            {
+                // No countdown UI — start immediately
                 _isRunning = true;
                 _hasStarted = true;
                 GameEvents.FireGameStart();
-            });
+            }
         }
 
         private void Update()
         {
             if (!_isRunning || _isPaused) return;
 
-            var action = _swipeDetector.ConsumeAction();
-            if (action != InputAction.None)
-                _inputManager.RegisterInput(action);
+            if (_swipeDetector != null)
+            {
+                var action = _swipeDetector.ConsumeAction();
+                if (action != InputAction.None)
+                {
+                    _inputManager.RegisterInput(action);
+
+                    // Report input to SDK for anti-cheat timeline
+                    if (_mode == GameMode.Competitive && ServiceLocator.TryGet<OGHubBridge>(out var bridge))
+                        bridge.ReportInput(action);
+                }
+            }
 
             _accumulator += Time.deltaTime;
             while (_accumulator >= TICK_TIME)
@@ -190,7 +210,7 @@ namespace NeonRunner.Game
             {
                 _isRunning = false;
                 GameEvents.FireGameOver(new GameOverArgs(snapshot.Score, snapshot.Runner.CurrentTick));
-                HandleGameOver(snapshot);
+                StartCoroutine(DeathSlowMo(snapshot));
             }
         }
 
@@ -200,11 +220,15 @@ namespace NeonRunner.Game
             {
                 GameEvents.FireScoreChanged(new ScoreChangedArgs(snapshot.Score, snapshot.Score - _lastScore));
                 _lastScore = snapshot.Score;
+
+                // Report score to SDK for live validation
+                if (_mode == GameMode.Competitive && ServiceLocator.TryGet<OGHubBridge>(out var bridge))
+                    bridge.UpdateScore(snapshot.Score);
             }
 
             if (snapshot.ComboCount != _lastComboCount)
             {
-                GameEvents.FireComboChanged(new ComboChangedArgs(snapshot.ComboCount, (float)snapshot.ComboMultiplier));
+                GameEvents.FireComboChanged(new ComboChangedArgs(snapshot.ComboCount, snapshot.ComboMultiplier.ToFloat()));
 
                 if (snapshot.ComboCount > 0 && snapshot.ComboCount % 5 == 0 && snapshot.ComboCount > _lastComboCount)
                     GameEvents.FireComboMilestone(snapshot.ComboCount);
@@ -223,19 +247,23 @@ namespace NeonRunner.Game
         {
             var snapshot = _simulation.GetSnapshot();
 
-            _runnerRenderer.UpdateVisuals(snapshot.Runner, alpha);
-            _runnerRenderer.UpdateComboGlow(snapshot.ComboCount, 20f);
+            if (_runnerRenderer != null)
+            {
+                _runnerRenderer.UpdateVisuals(snapshot.Runner, alpha);
+                _runnerRenderer.UpdateComboGlow(snapshot.ComboCount, 20f);
+            }
 
-            _obstacleRenderer.UpdateObstacles(_simulation.GetObstacles());
+            if (_obstacleRenderer != null)
+                _obstacleRenderer.UpdateObstacles(_simulation.GetObstacles());
 
             if (ServiceLocator.TryGet<CameraController>(out var cam))
             {
                 var pos = _runnerRenderer.transform.position;
-                cam.UpdateCamera(pos, (float)snapshot.Runner.Speed);
+                cam.UpdateCamera(pos, snapshot.Runner.Speed.ToFloat());
             }
 
             if (ServiceLocator.TryGet<EnvironmentRenderer>(out var env))
-                env.UpdateEnvironment((float)snapshot.Runner.Speed, Time.deltaTime);
+                env.UpdateEnvironment(snapshot.Runner.Speed.ToFloat(), Time.deltaTime);
 
             if (ServiceLocator.TryGet<ScreenEffects>(out var fx))
             {
@@ -249,6 +277,15 @@ namespace NeonRunner.Game
                 };
                 fx.SetPhaseVignette(vignetteIntensity);
             }
+        }
+
+        private System.Collections.IEnumerator DeathSlowMo(SimulationSnapshot snapshot)
+        {
+            // Slow-mo effect on death
+            Time.timeScale = 0.3f;
+            yield return new WaitForSecondsRealtime(0.6f);
+            Time.timeScale = 1f;
+            HandleGameOver(snapshot);
         }
 
         private async void HandleGameOver(SimulationSnapshot snapshot)
@@ -269,20 +306,66 @@ namespace NeonRunner.Game
 
             if (_mode == GameMode.Competitive)
             {
-                var bridge = ServiceLocator.Get<OGHubBridge>();
+                ServiceLocator.TryGet<OGHubBridge>(out var bridge);
                 if (bridge != null)
                 {
-                    var replay = ReplaySystem.CreateReplay(snapshot, _config, _inputManager.RecordedInputs);
-                    outcome = await bridge.SubmitScore(replay);
+                    var sdkResult = await bridge.SubmitFinalScore();
+                    if (sdkResult != null)
+                    {
+                        outcome = new SessionOutcome
+                        {
+                            accepted = sdkResult.accepted,
+                            score = sdkResult.score,
+                            rank = sdkResult.rank,
+                        };
+
+                        // Parse near-miss info if available
+                        if (!string.IsNullOrEmpty(sdkResult.nearMissJson))
+                        {
+                            try { outcome.nearMiss = JsonUtility.FromJson<NearMissInfo>(sdkResult.nearMissJson); }
+                            catch { /* near-miss data unavailable */ }
+                        }
+                    }
                 }
             }
 
-            var scene = ServiceLocator.Get<SceneController>();
-            scene?.LoadScene("ResultsScene", () =>
+            if (ServiceLocator.TryGet<SceneController>(out var scene))
             {
-                var resultsUI = FindAnyObjectByType<ResultsScreenUI>();
-                resultsUI?.Show(snapshot, _mode == GameMode.Competitive, outcome);
-            });
+                scene.LoadScene("ResultsScene", () =>
+                {
+                    var resultsUI = FindAnyObjectByType<ResultsScreenUI>();
+                    resultsUI?.Show(snapshot, _mode == GameMode.Competitive, outcome);
+                });
+            }
+            else
+            {
+                // No SceneController — load MainMenu or restart after delay
+                Debug.Log($"[GameManager] Game Over! Score: {snapshot.Score}");
+                if (ServiceLocator.TryGet<UIManager>(out var ui))
+                    ui.ShowGameOver(snapshot.Score);
+                StartCoroutine(GameOverFallback(snapshot));
+            }
+        }
+
+        private System.Collections.IEnumerator GameOverFallback(SimulationSnapshot snapshot)
+        {
+            yield return new WaitForSecondsRealtime(1.5f);
+
+            // Try to load ResultsScene, then MainMenu, then restart
+            var sceneName = "ResultsScene";
+            if (Application.CanStreamedLevelBeLoaded(sceneName))
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene(sceneName);
+            }
+            else if (Application.CanStreamedLevelBeLoaded("MainMenuScene"))
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenuScene");
+            }
+            else
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene(
+                    UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+            }
         }
 
         public void TogglePause()
@@ -292,35 +375,42 @@ namespace NeonRunner.Game
             if (_isPaused)
             {
                 _isPaused = false;
-                _pauseMenuUI.Hide();
+                if (_pauseMenuUI != null) _pauseMenuUI.Hide();
             }
             else
             {
                 _isPaused = true;
-                _pauseMenuUI.Show();
+                if (_pauseMenuUI != null) _pauseMenuUI.Show();
             }
         }
 
         private void CheckTutorialPrompts(SimulationSnapshot snapshot)
         {
+            // Skip tutorial prompts if UI objects aren't wired
+            if (_tutorialSwipeLeftRight == null && _tutorialSwipeUp == null && _tutorialSwipeDown == null)
+            {
+                _tutorialStep = 4; // Mark tutorial as done
+                return;
+            }
+
             switch (_tutorialStep)
             {
                 case 0 when snapshot.Runner.CurrentTick >= 150:
-                    _tutorialSwipeLeftRight?.SetActive(true);
+                    if (_tutorialSwipeLeftRight != null) _tutorialSwipeLeftRight.SetActive(true);
                     _tutorialStep = 1;
                     break;
                 case 1 when snapshot.Runner.CurrentTick >= 330:
-                    _tutorialSwipeLeftRight?.SetActive(false);
-                    _tutorialSwipeUp?.SetActive(true);
+                    if (_tutorialSwipeLeftRight != null) _tutorialSwipeLeftRight.SetActive(false);
+                    if (_tutorialSwipeUp != null) _tutorialSwipeUp.SetActive(true);
                     _tutorialStep = 2;
                     break;
                 case 2 when snapshot.Runner.CurrentTick >= 510:
-                    _tutorialSwipeUp?.SetActive(false);
-                    _tutorialSwipeDown?.SetActive(true);
+                    if (_tutorialSwipeUp != null) _tutorialSwipeUp.SetActive(false);
+                    if (_tutorialSwipeDown != null) _tutorialSwipeDown.SetActive(true);
                     _tutorialStep = 3;
                     break;
                 case 3 when snapshot.Runner.CurrentTick >= 690:
-                    _tutorialSwipeDown?.SetActive(false);
+                    if (_tutorialSwipeDown != null) _tutorialSwipeDown.SetActive(false);
                     _tutorialStep = 4;
                     break;
             }
@@ -366,7 +456,7 @@ namespace NeonRunner.Game
 
             if (ram < 3072 || vram < 1024)
                 tier = 0;
-            else if (Screen.currentResolution.refreshRate >= 120 && ram >= 6144)
+            else if (Screen.currentResolution.refreshRateRatio.value >= 120 && ram >= 6144)
                 tier = 2;
 
             Application.targetFrameRate = tier switch

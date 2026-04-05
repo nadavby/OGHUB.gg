@@ -1,0 +1,49 @@
+name: "Neon Runner"
+slug: "neon-runner"
+version: "1.0.0"
+engine: unity
+
+inputs:
+  - name: lane_left
+    type: action
+  - name: lane_right
+    type: action
+  - name: jump
+    type: action
+  - name: slide
+    type: action
+
+scoring:
+  range: [0, 999999999]
+  method: accumulative
+  components:
+    - name: distance
+      weight: 1
+    - name: near_miss
+      weight: 100
+    - name: perfect_dodge
+      weight: 200
+    - name: skill_gate
+      weight: 500
+
+session:
+  maxDuration: 600
+  minDuration: 5
+  allowPause: false
+
+anticheat:
+  maxInputRate: 10
+  minReactionTime: 80
+  maxScorePerSecond: 2000
+
+trust:
+  tier: verified
+  replaySimulator: native
+
+validation:
+  snapshotInterval: 3
+  requiredFields:
+    - current_score
+    - current_lane
+    - player_alive
+    - current_tick

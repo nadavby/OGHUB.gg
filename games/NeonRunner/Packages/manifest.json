@@ -1,5 +1,8 @@
 {
   "dependencies": {
+    "com.oghub.sdk": "file:../../../packages/sdk-unity",
+    "com.unity.inputsystem": "1.11.2",
+    "com.unity.render-pipelines.universal": "17.0.3",
     "com.unity.multiplayer.center": "1.0.1",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.adaptiveperformance": "1.0.0",
