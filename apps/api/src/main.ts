@@ -15,12 +15,14 @@ import { gamesRouter } from './games/games.router';
 import { sessionsRouter } from './sessions/sessions.router';
 import { leaderboardRouter } from './leaderboards/leaderboard.router';
 import { ghostsRouter } from './ghosts/ghosts.router';
+import { roomsRouter } from './rooms/rooms.router';
 import { gameRegistryRouter } from './game-registry/game-registry.router';
 import { errorHandler } from './common/error-handler';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './common/swagger';
 import { startEventDrainWorker } from './events/event-pipeline';
 import { startChallengeLifecycleWorker } from './challenges/challenge-lifecycle';
+import { startRoomLifecycleWorker } from './rooms/room-lifecycle';
 import { attachLiveValidator } from './live-validation/live-validator';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
@@ -88,6 +90,7 @@ app.use('/api/games', gamesRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/leaderboards', leaderboardRouter);
 app.use('/api/ghosts', ghostsRouter);
+app.use('/api/rooms', roomsRouter);
 app.use('/api/games', gameRegistryRouter);
 
 // ─── Error Handler ──────────────────────────────────────────
@@ -106,6 +109,9 @@ const server = app.listen(PORT, () => {
 
   // Start challenge lifecycle worker
   startChallengeLifecycleWorker();
+
+  // Start room lifecycle worker
+  startRoomLifecycleWorker();
 });
 
 // Attach WebSocket live validation server
