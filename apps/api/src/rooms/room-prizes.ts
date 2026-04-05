@@ -42,7 +42,7 @@ export async function distributeRoomPrizes(roomId: string): Promise<RoomPrizeDis
 
   if (roomScores.length === 0) return [];
 
-  const splits = calculateRoomPrizeSplit(room.format, roomScores.length);
+  const splits = calculateRoomPrizeSplit(room.format, room.participants.length);
   const distributions: RoomPrizeDistribution[] = [];
 
   await prisma.$transaction(async (tx) => {

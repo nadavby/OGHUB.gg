@@ -39,22 +39,22 @@ roomsRouter.post('/create', async (req: AuthenticatedRequest, res, next) => {
     const game = await prisma.game.findUnique({ where: { id: gameId } });
     if (!game || !game.isActive) throw new AppError('Game not found', 404);
 
-    // Check active room limit
-    const activeCount = await prisma.roomParticipant.count({
-      where: {
-        userId,
-        room: { status: { in: ['WAITING', 'READY', 'IN_PROGRESS'] } },
-      },
-    });
-    if (activeCount >= MAX_ACTIVE_ROOMS) {
-      throw new AppError(`You can only be in ${MAX_ACTIVE_ROOMS} active rooms at a time`, 429);
-    }
-
     const fee = new Decimal(entryFee);
     const maxPlayers = FORMAT_MAX_PLAYERS[format];
     const totalRounds = FORMAT_TOTAL_ROUNDS[format];
 
     const room = await prisma.$transaction(async (tx) => {
+      // Check active room limit inside transaction to prevent race conditions
+      const activeCount = await tx.roomParticipant.count({
+        where: {
+          userId,
+          room: { status: { in: ['WAITING', 'READY', 'IN_PROGRESS'] } },
+        },
+      });
+      if (activeCount >= MAX_ACTIVE_ROOMS) {
+        throw new AppError(`You can only be in ${MAX_ACTIVE_ROOMS} active rooms at a time`, 429);
+      }
+
       // Deduct entry fee from creator
       const wallet = await tx.wallet.findUnique({ where: { userId } });
       if (!wallet) throw new AppError('Wallet not found', 404);
@@ -64,17 +64,6 @@ roomsRouter.post('/create', async (req: AuthenticatedRequest, res, next) => {
 
       const newBalance = wallet.balance.sub(fee);
       await tx.wallet.update({ where: { id: wallet.id }, data: { balance: newBalance } });
-
-      await tx.walletTransaction.create({
-        data: {
-          walletId: wallet.id,
-          type: 'ENTRY_FEE',
-          amount: fee.neg(),
-          balanceBefore: wallet.balance,
-          balanceAfter: newBalance,
-          description: `Room entry: ${game.title} (${format})`,
-        },
-      });
 
       // Calculate initial prize pool contribution
       const platformCut = fee.mul(PLATFORM_FEE_RATE);
@@ -93,6 +82,18 @@ roomsRouter.post('/create', async (req: AuthenticatedRequest, res, next) => {
           totalRounds,
           status: 'WAITING',
           expiresAt: new Date(Date.now() + ROOM_EXPIRY_MS),
+        },
+      });
+
+      await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type: 'ENTRY_FEE',
+          amount: fee.neg(),
+          balanceBefore: wallet.balance,
+          balanceAfter: newBalance,
+          description: `Room entry: ${game.title} (${format})`,
+          referenceId: created.id,
         },
       });
 
@@ -235,18 +236,18 @@ roomsRouter.post('/:id/join', async (req: AuthenticatedRequest, res, next) => {
     const userId = req.user!.userId;
     const roomId = req.params.id;
 
-    // Check active room limit
-    const activeCount = await prisma.roomParticipant.count({
-      where: {
-        userId,
-        room: { status: { in: ['WAITING', 'READY', 'IN_PROGRESS'] } },
-      },
-    });
-    if (activeCount >= MAX_ACTIVE_ROOMS) {
-      throw new AppError(`You can only be in ${MAX_ACTIVE_ROOMS} active rooms at a time`, 429);
-    }
-
     const result = await prisma.$transaction(async (tx) => {
+      // Check active room limit inside transaction to prevent race conditions
+      const activeCount = await tx.roomParticipant.count({
+        where: {
+          userId,
+          room: { status: { in: ['WAITING', 'READY', 'IN_PROGRESS'] } },
+        },
+      });
+      if (activeCount >= MAX_ACTIVE_ROOMS) {
+        throw new AppError(`You can only be in ${MAX_ACTIVE_ROOMS} active rooms at a time`, 429);
+      }
+
       const room = await tx.room.findUnique({
         where: { id: roomId },
         include: {

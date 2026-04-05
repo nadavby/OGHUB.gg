@@ -172,58 +172,6 @@ const options: swaggerJsdoc.Options = {
           },
         },
       },
-      '/wallet/double-or-nothing': {
-        post: {
-          tags: ['Wallet'],
-          summary: 'Play double-or-nothing coin flip',
-          security: [{ bearerAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['amount'],
-                  properties: {
-                    amount: { type: 'number', minimum: 0, exclusiveMinimum: true, maximum: 10000 },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Coin flip result with provably fair proof',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      data: {
-                        type: 'object',
-                        properties: {
-                          won: { type: 'boolean' },
-                          balance: { type: 'string' },
-                          proof: {
-                            type: 'object',
-                            properties: {
-                              serverSeed: { type: 'string' },
-                              clientSeed: { type: 'string' },
-                              hash: { type: 'string' },
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            402: { description: 'Insufficient balance' },
-          },
-        },
-      },
       '/sessions/create': {
         post: {
           tags: ['Sessions'],
