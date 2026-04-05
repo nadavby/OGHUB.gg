@@ -188,3 +188,99 @@ export interface SDKConfig {
   appKey: string;
   appSecret: string;
 }
+
+// ─── Game Definition Protocol ──────────────────────────────
+
+export type TrustTier = 'basic' | 'standard' | 'verified';
+export type InputType = 'action' | 'vector2' | 'vector3' | 'scalar' | 'toggle';
+export type ScoringMethod = 'accumulative' | 'time_based' | 'objective_based' | 'custom';
+
+export interface InputDefinition {
+  name: string;
+  type: InputType;
+  metadata?: Record<string, string>;
+}
+
+export interface ScoringDefinition {
+  range: [number, number];
+  method: ScoringMethod;
+  components?: Array<{ name: string; weight: number }>;
+}
+
+export interface SessionRules {
+  maxDuration: number;    // seconds
+  minDuration: number;    // seconds
+  allowPause: boolean;
+  lives?: number;
+}
+
+export interface AnticheatConfig {
+  maxInputRate: number;          // per second
+  minReactionTime: number;       // ms
+  maxScorePerSecond: number;
+  customRules?: Array<{
+    name: string;
+    condition: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+  }>;
+}
+
+export interface ValidationConfig {
+  snapshotInterval: number;      // seconds
+  requiredFields: string[];
+}
+
+export interface GameDefinition {
+  name: string;
+  slug: string;
+  version: string;
+  engine: string;
+  inputs: InputDefinition[];
+  scoring: ScoringDefinition;
+  session: SessionRules;
+  anticheat: AnticheatConfig;
+  trust: {
+    tier: TrustTier;
+    replayFormat?: string;
+    replaySimulator?: string;
+  };
+  validation?: ValidationConfig;
+}
+
+// ─── Live Validation (WebSocket) ───────────────────────────
+
+export interface StateSnapshot {
+  [key: string]: unknown;
+}
+
+export interface ValidationRequest {
+  type: 'validation_request';
+  requestId: string;
+  timestamp: number;
+}
+
+export interface ValidationResponse {
+  type: 'validation_response';
+  requestId: string;
+  state: StateSnapshot;
+}
+
+export interface ScoreUpdate {
+  type: 'score_update';
+  score: number;
+  hash: string;
+  sequence: number;
+}
+
+export interface LeaderboardUpdate {
+  type: 'leaderboard_update';
+  entries: LeaderboardEntry[];
+}
+
+// ─── Trust Tier Limits ─────────────────────────────────────
+
+export const TRUST_TIER_LIMITS: Record<TrustTier, { maxPrizePool: number }> = {
+  basic: { maxPrizePool: 50 },
+  standard: { maxPrizePool: 1000 },
+  verified: { maxPrizePool: Infinity },
+};
