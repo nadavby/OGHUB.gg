@@ -1,16 +1,17 @@
 {
   "name": "@oghub/sdk",
-  "version": "1.0.0",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "version": "2.0.0",
+  "description": "OGHub SDK for Web games",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "lint": "echo 'no lint configured'"
+    "dev": "tsc --watch"
   },
   "dependencies": {
-    "@oghub/shared": "*"
+    "@oghub/sdk-core": "*"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "^5.4.0"
   }
 }
