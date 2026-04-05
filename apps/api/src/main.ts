@@ -15,6 +15,7 @@ import { gamesRouter } from './games/games.router';
 import { sessionsRouter } from './sessions/sessions.router';
 import { leaderboardRouter } from './leaderboards/leaderboard.router';
 import { ghostsRouter } from './ghosts/ghosts.router';
+import { gameRegistryRouter } from './game-registry/game-registry.router';
 import { errorHandler } from './common/error-handler';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './common/swagger';
@@ -86,6 +87,7 @@ app.use('/api/games', gamesRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/leaderboards', leaderboardRouter);
 app.use('/api/ghosts', ghostsRouter);
+app.use('/api/games', gameRegistryRouter);
 
 // ─── Error Handler ──────────────────────────────────────────
 
