@@ -1,0 +1,17 @@
+{
+  "name": "@oghub/sdk-core",
+  "version": "2.0.0",
+  "description": "OGHub SDK Core — generic game platform integration",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@oghub/shared": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
