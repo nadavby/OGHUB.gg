@@ -1,0 +1,12 @@
+{
+  "name": "com.oghub.sdk",
+  "version": "2.0.0",
+  "displayName": "OGHub SDK",
+  "description": "Generic OGHub platform SDK for Unity games",
+  "unity": "2021.3",
+  "keywords": ["oghub", "sdk", "gaming", "anticheat"],
+  "author": {
+    "name": "OGHub",
+    "url": "https://oghub.gg"
+  }
+}
