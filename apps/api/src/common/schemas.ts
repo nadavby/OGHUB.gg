@@ -71,10 +71,6 @@ export const listRoomsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
-export const doubleOrNothingSchema = z.object({
-  amount: z.number().positive('Amount must be positive').max(10000, 'Amount exceeds maximum'),
-});
-
 export const withdrawalSchema = z.object({
   amount: z.number().positive('Amount must be positive').max(10000, 'Amount exceeds maximum per withdrawal'),
 });
