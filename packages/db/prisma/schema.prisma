@@ -168,6 +168,7 @@ model Game {
   isActive      Boolean      @default(true)
   isFeatured    Boolean      @default(false)
   tags          String[]
+  trustTier     String       @default("basic")    // basic | standard | verified
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -175,9 +176,21 @@ model Game {
   developer     DeveloperApp @relation(fields: [developerId], references: [id])
   challenges    Challenge[]
   sessions      GameSession[]
+  definition    GameDefinition?
 
   @@index([slug])
   @@index([isActive, isFeatured])
+}
+
+model GameDefinition {
+  id            String    @id @default(cuid())
+  gameId        String    @unique
+  version       String
+  definition    Json      // Full GameDefinition object
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  game          Game      @relation(fields: [gameId], references: [id])
 }
 
 model DeveloperApp {
