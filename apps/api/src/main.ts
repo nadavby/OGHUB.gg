@@ -21,6 +21,7 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './common/swagger';
 import { startEventDrainWorker } from './events/event-pipeline';
 import { startChallengeLifecycleWorker } from './challenges/challenge-lifecycle';
+import { attachLiveValidator } from './live-validation/live-validator';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
 
@@ -95,7 +96,7 @@ app.use(errorHandler);
 
 // ─── Start ──────────────────────────────────────────────────
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 OGHUB API running on http://localhost:${PORT}`);
 
   // Start event pipeline drain worker
@@ -106,6 +107,9 @@ app.listen(PORT, () => {
   // Start challenge lifecycle worker
   startChallengeLifecycleWorker();
 });
+
+// Attach WebSocket live validation server
+attachLiveValidator(server);
 
 async function gracefulShutdown(signal: string) {
   console.log(`\n${signal} received. Shutting down gracefully...`);
