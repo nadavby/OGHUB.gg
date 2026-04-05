@@ -39,12 +39,10 @@ export default function HomePage() {
     ? games.filter(g => g.tags.includes(activeTag))
     : games;
 
-  const featured = filteredGames.filter(g => g.isFeatured);
-  const allGames = filteredGames.filter(g => !g.isFeatured);
   const allTags = [...new Set(games.flatMap(g => g.tags))];
 
   return (
-    <div className="game-feed">
+    <div className="home-page">
       {loading && (
         <div className="empty-state">
           <p>Loading games...</p>
@@ -53,11 +51,10 @@ export default function HomePage() {
 
       {error && (
         <div className="empty-state">
-          <span className="icon">⚠️</span>
           <p>{error}</p>
           <button
-            className="tag"
-            style={{ cursor: 'pointer', marginTop: 12 }}
+            className="tag-btn tag-btn-active"
+            style={{ marginTop: 12 }}
             onClick={() => {
               setError(null);
               setLoading(true);
@@ -76,66 +73,64 @@ export default function HomePage() {
       )}
 
       {!loading && !error && (<>
-        {/* Category Tags */}
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 12, scrollbarWidth: 'none' }}>
-          <button
-            className="tag"
-            style={{
-              background: !activeTag ? 'var(--neon-purple)' : undefined,
-              color: !activeTag ? 'white' : undefined,
-              borderColor: !activeTag ? 'var(--neon-purple)' : undefined,
-              boxShadow: !activeTag ? '0 0 12px var(--neon-purple-glow)' : undefined,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-            onClick={() => setActiveTag(null)}
-          >
-            All Games
-          </button>
-          {allTags.map(tag => (
-            <button
-              key={tag}
-              className="tag"
-              style={{
-                background: activeTag === tag ? 'var(--neon-purple)' : undefined,
-                color: activeTag === tag ? 'white' : undefined,
-                borderColor: activeTag === tag ? 'var(--neon-purple)' : undefined,
-                boxShadow: activeTag === tag ? '0 0 12px var(--neon-purple-glow)' : undefined,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                textTransform: 'capitalize',
-              }}
-              onClick={() => setActiveTag(tag)}
-            >
-              {tag}
-            </button>
-          ))}
-        </div>
+        {/* Open Rooms Placeholder */}
+        <section className="home-section">
+          <div className="section-header">
+            <h2 className="section-title">Open Rooms</h2>
+          </div>
+          <div className="empty-state-inline">
+            <p>No open rooms right now</p>
+          </div>
+        </section>
 
-        {/* Featured Games */}
-        {featured.length > 0 && (
-          <div className="featured-section">
-            <h2 className="section-title">Featured</h2>
-            {featured.map((game) => (
-              <div key={game.id} style={{ marginBottom: 16 }}>
-                <GameCard {...game} />
-              </div>
+        {/* Games Section */}
+        <section className="home-section">
+          <div className="section-header">
+            <h2 className="section-title">Games</h2>
+          </div>
+
+          {/* Tag Filter */}
+          <div className="tag-filter">
+            <button
+              className={`tag-btn ${!activeTag ? 'tag-btn-active' : ''}`}
+              onClick={() => setActiveTag(null)}
+            >
+              All
+            </button>
+            {allTags.map(tag => (
+              <button
+                key={tag}
+                className={`tag-btn ${activeTag === tag ? 'tag-btn-active' : ''}`}
+                onClick={() => setActiveTag(tag)}
+              >
+                {tag.charAt(0).toUpperCase() + tag.slice(1)}
+              </button>
             ))}
           </div>
-        )}
 
-        {/* All Games */}
-        <h2 className="section-title">All Games</h2>
-        {allGames.map((game) => (
-          <GameCard key={game.id} {...game} />
-        ))}
-
-        {filteredGames.length === 0 && (
-          <div className="empty-state">
-            <span className="icon">🎮</span>
-            <p>No games found</p>
+          {/* Games Grid */}
+          <div className="games-grid">
+            {filteredGames.map((game) => (
+              <GameCard
+                key={game.id}
+                id={game.id}
+                slug={game.slug}
+                title={game.title}
+                description={game.description}
+                thumbnailUrl={game.thumbnailUrl}
+                tags={game.tags}
+                activeRooms={game.activeChallenges}
+                activePlayers={0}
+              />
+            ))}
           </div>
-        )}
+
+          {filteredGames.length === 0 && (
+            <div className="empty-state">
+              <p>No games found</p>
+            </div>
+          )}
+        </section>
       </>)}
     </div>
   );
