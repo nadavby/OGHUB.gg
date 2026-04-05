@@ -118,7 +118,7 @@ export default function ProfilePage() {
               key={i}
               className={`achievement-badge ${achievement.earned ? 'achievement-earned' : 'achievement-locked'}`}
             >
-              <span className="achievement-label">{achievement.label}</span>
+              {achievement.label}
             </div>
           ))}
         </div>

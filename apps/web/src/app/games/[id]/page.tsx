@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
@@ -55,14 +55,13 @@ const MOCK_LEADERBOARD: LeaderboardEntry[] = [
 
 export default function GameDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const { user } = useAuth();
   const [game, setGame] = useState<GameDetail>(DEMO_GAME);
 
   useEffect(() => {
     api(`/api/games/${params.id}`)
       .then((data: GameDetail) => setGame(data))
-      .catch(() => {});
+      .catch(() => { /* API unavailable, show demo data */ });
   }, [params.id]);
 
   return (
