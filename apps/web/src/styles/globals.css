@@ -646,6 +646,114 @@ input, select, textarea {
   background: var(--primary-hover);
 }
 
+/* --- Modal / Bottom Sheet ---------------------------------------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.modal-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  padding: var(--space-lg) var(--space-md) var(--space-xl);
+}
+
+.modal-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: var(--radius-full);
+  margin: 0 auto var(--space-md);
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.modal-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.format-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.format-pill {
+  padding: 8px 16px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.format-pill:hover {
+  border-color: var(--border-hover);
+}
+
+.format-pill-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.modal-fee-row {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.modal-fee-row .form-input {
+  flex: 1;
+}
+
+.modal-summary {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-sm) 0;
+  border-top: 1px solid var(--border);
+  margin-bottom: var(--space-md);
+  font-size: 0.875rem;
+}
+
+.modal-summary-label {
+  color: var(--text-secondary);
+}
+
+.modal-summary-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-error {
+  font-size: 0.8125rem;
+  color: var(--danger);
+  margin-bottom: var(--space-sm);
+}
+
 /* --- Leaderboard ------------------------------------------------- */
 
 .leaderboard-list {
