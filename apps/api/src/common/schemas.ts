@@ -28,20 +28,20 @@ export const endSessionSchema = z.object({
     inputTimeline: z.array(z.object({
       timestamp: z.number(),
       type: z.string(),
-      data: z.record(z.unknown()).default({}),
+      data: z.any().optional(),
       sequence: z.number().int(),
     })),
     duration: z.number().int().min(0),
     checksum: z.string().optional(),
   }).nullable().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.any().optional(),
 });
 
 export const eventsSchema = z.object({
   events: z.array(z.object({
     eventType: z.string().optional(),
     type: z.string().optional(),
-    payload: z.record(z.unknown()).default({}),
+    payload: z.any().optional(),
     timestamp: z.number(),
     sequence: z.number().int(),
   })).min(1, 'At least one event is required').max(100, 'Maximum 100 events per batch'),
@@ -56,6 +56,19 @@ export const registerGameSchema = z.object({
   deepLinkScheme: z.string().max(50).optional().nullable(),
   difficulty: z.number().int().min(1).max(5).optional(),
   tags: z.array(z.string().max(20)).max(10).optional(),
+});
+
+export const createRoomSchema = z.object({
+  gameId: z.string().min(1, 'gameId is required'),
+  format: z.enum(['ONE_V_ONE', 'BEST_OF_3', 'FFA_5', 'FFA_10', 'FFA_20']),
+  entryFee: z.number().min(0.50, 'Minimum entry fee is $0.50').max(100, 'Maximum entry fee is $100'),
+});
+
+export const listRoomsSchema = z.object({
+  gameId: z.string().optional(),
+  status: z.enum(['WAITING', 'READY', 'IN_PROGRESS', 'COMPLETED']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
 export const doubleOrNothingSchema = z.object({
