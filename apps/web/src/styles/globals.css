@@ -1311,7 +1311,7 @@ input, select, textarea {
   text-shadow: 0 0 6px var(--toxic-green-glow);
 }
 
-/* ─── Wallet Page ────────────────────────────────────────────── */
+/* --- Wallet Page ------------------------------------------------- */
 
 .wallet-page {
   padding: var(--space-md);
@@ -1320,73 +1320,157 @@ input, select, textarea {
 .wallet-balance-card {
   padding: var(--space-xl) var(--space-lg);
   background: var(--surface);
-  border: 1px solid var(--border-gold);
-  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   text-align: center;
-  margin-bottom: var(--space-lg);
-  box-shadow: var(--shadow-gold);
-  position: relative;
-  overflow: hidden;
-}
-
-/* Gold shimmer on balance card */
-.wallet-balance-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.05), transparent);
-  animation: shimmer 4s ease-in-out infinite;
+  margin-bottom: var(--space-md);
 }
 
 .wallet-balance-amount {
-  font-family: var(--font-display);
-  font-size: 2.5rem;
-  font-weight: 900;
-  color: var(--gold);
-  text-shadow: 0 0 20px var(--gold-glow);
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--money);
   letter-spacing: -0.02em;
-  position: relative;
-  z-index: 1;
+  margin-bottom: 4px;
 }
 
 .wallet-balance-label {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.6875rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
-  margin-top: 4px;
-  position: relative;
-  z-index: 1;
+  margin-bottom: var(--space-lg);
 }
 
-.wallet-action-btn {
-  padding: 10px 20px;
+.wallet-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.wallet-btn {
+  flex: 1;
+  padding: 12px;
   border-radius: var(--radius-md);
-  font-weight: 700;
-  font-size: 0.85rem;
+  font-weight: 600;
+  font-size: 0.875rem;
   transition: var(--transition-fast);
 }
 
-.wallet-action-btn.primary {
-  background: var(--gradient-win);
-  color: #000;
-  box-shadow: 0 4px 15px rgba(34, 213, 90, 0.3);
+.wallet-btn-deposit {
+  background: var(--trust);
+  color: white;
 }
 
-.wallet-action-btn.primary:hover {
-  box-shadow: 0 6px 25px rgba(34, 213, 90, 0.4);
-  transform: translateY(-1px);
+.wallet-btn-deposit:hover {
+  background: #4B92F7;
 }
 
-/* Transactions */
+.wallet-btn-deposit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wallet-btn-withdraw {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.wallet-btn-withdraw:hover {
+  border-color: var(--border-hover);
+}
+
+/* --- Wallet Stats ------------------------------------------------ */
+
+.wallet-stats {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.wallet-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-md) var(--space-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.wallet-stat-value {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.wallet-stat-win {
+  color: var(--win);
+}
+
+.wallet-stat-label {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+/* --- Deposit Section --------------------------------------------- */
+
+.deposit-section {
+  margin-bottom: var(--space-lg);
+}
+
+.deposit-row {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.deposit-row .form-input {
+  flex: 1;
+}
+
+.deposit-row .wallet-btn {
+  flex: none;
+  padding: 12px 24px;
+  white-space: nowrap;
+}
+
+.quick-amounts {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.quick-amount-btn {
+  flex: 1;
+  padding: 8px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.quick-amount-btn:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+/* --- Transactions ------------------------------------------------ */
+
 .transaction-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .transaction-item {
@@ -1395,33 +1479,33 @@ input, select, textarea {
   gap: var(--space-sm);
   padding: 12px;
   background: var(--surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  transition: var(--transition-fast);
+  transition: border-color var(--transition-fast);
 }
 
 .transaction-item:hover {
-  border-color: var(--border-glow);
+  border-color: var(--border-hover);
 }
 
 .transaction-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
-.transaction-icon.deposit {
-  background: rgba(34, 213, 90, 0.1);
-  border: 1px solid rgba(34, 213, 90, 0.2);
+.tx-positive {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--win);
 }
 
-.transaction-icon.fee {
+.tx-negative {
   background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--danger);
 }
 
 .transaction-info {
@@ -1429,28 +1513,27 @@ input, select, textarea {
   min-width: 0;
 }
 
-.transaction-type {
-  font-weight: 600;
-  font-size: 0.85rem;
+.transaction-desc {
+  font-weight: 500;
+  font-size: 0.875rem;
 }
 
 .transaction-date {
-  font-size: 0.7rem;
+  font-size: 0.6875rem;
   color: var(--text-muted);
 }
 
 .transaction-amount {
   font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
 }
 
-.transaction-amount.positive {
-  color: var(--toxic-green);
-  text-shadow: 0 0 6px var(--toxic-green-glow);
+.tx-amount-positive {
+  color: var(--win);
 }
 
-.transaction-amount.negative {
+.tx-amount-negative {
   color: var(--danger);
 }
 
