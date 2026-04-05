@@ -1,21 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { useRooms, RoomListItem } from '@/hooks/useRooms';
 import { api } from '@/lib/api';
-
-interface Room {
-  id: string;
-  creator: string;
-  format: string;
-  entryFee: string;
-  prizePool: string;
-  currentPlayers: number;
-  maxPlayers: number;
-  status: string;
-}
+import CreateRoomModal from '@/components/CreateRoomModal';
 
 interface LeaderboardEntry {
   rank: number;
@@ -29,21 +20,15 @@ interface GameDetail {
   title: string;
   description: string | null;
   tags: string[];
-  challenges: any[];
 }
 
-const DEMO_GAME: GameDetail = {
-  id: '1', slug: 'neon-runner', title: 'Neon Runner',
-  description: 'Navigate the deterministically generated cyber-tunnel. Precision makes perfect - slide under, jump over, and combo your skill dodges to climb the leaderboard.',
-  tags: ['arcade', 'skill'],
-  challenges: [],
+const FORMAT_LABELS: Record<string, string> = {
+  ONE_V_ONE: '1v1',
+  BEST_OF_3: 'Bo3',
+  FFA_5: 'FFA 5',
+  FFA_10: 'FFA 10',
+  FFA_20: 'FFA 20',
 };
-
-const MOCK_ROOMS: Room[] = [
-  { id: 'r1', creator: 'xProPlayer', format: '1v1', entryFee: '5.00', prizePool: '9.50', currentPlayers: 1, maxPlayers: 2, status: 'WAITING' },
-  { id: 'r2', creator: 'GameMaster99', format: 'FFA 10', entryFee: '2.00', prizePool: '19.00', currentPlayers: 7, maxPlayers: 10, status: 'WAITING' },
-  { id: 'r3', creator: 'SkillKing', format: '1v1 Bo3', entryFee: '10.00', prizePool: '19.00', currentPlayers: 1, maxPlayers: 2, status: 'WAITING' },
-];
 
 const MOCK_LEADERBOARD: LeaderboardEntry[] = [
   { rank: 1, username: 'xProPlayer', score: 15420 },
@@ -55,14 +40,84 @@ const MOCK_LEADERBOARD: LeaderboardEntry[] = [
 
 export default function GameDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const { user } = useAuth();
-  const [game, setGame] = useState<GameDetail>(DEMO_GAME);
+  const { listRooms, joinRoom } = useRooms();
+
+  const [game, setGame] = useState<GameDetail | null>(null);
+  const [gameLoading, setGameLoading] = useState(true);
+
+  const [rooms, setRooms] = useState<RoomListItem[]>([]);
+  const [roomsLoading, setRoomsLoading] = useState(true);
+  const [roomsError, setRoomsError] = useState<string | null>(null);
+
+  const [joiningId, setJoiningId] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
+
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const gameId = params.id as string;
+
+  // Fetch game detail
+  useEffect(() => {
+    setGameLoading(true);
+    api<GameDetail>(`/api/games/${gameId}`)
+      .then((data) => setGame(data))
+      .catch(() => {
+        // API unavailable — leave game as null; page still renders rooms
+      })
+      .finally(() => setGameLoading(false));
+  }, [gameId]);
+
+  // Fetch rooms (and re-fetch every 30 s)
+  const fetchRooms = useCallback(async () => {
+    try {
+      const result = await listRooms({ gameId, status: 'WAITING' });
+      setRooms(result.rooms);
+      setRoomsError(null);
+    } catch (err: any) {
+      setRoomsError(err.message || 'Failed to load rooms');
+    } finally {
+      setRoomsLoading(false);
+    }
+  }, [gameId, listRooms]);
 
   useEffect(() => {
-    api(`/api/games/${params.id}`)
-      .then((data: GameDetail) => setGame(data))
-      .catch(() => { /* API unavailable, show demo data */ });
-  }, [params.id]);
+    fetchRooms();
+    const timer = setInterval(fetchRooms, 30_000);
+    return () => clearInterval(timer);
+  }, [fetchRooms]);
+
+  const handleJoin = async (roomId: string) => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    setJoiningId(roomId);
+    setJoinError(null);
+    try {
+      await joinRoom(roomId);
+      router.push(`/rooms/${roomId}`);
+    } catch (err: any) {
+      setJoinError(err.message || 'Failed to join room');
+      setJoiningId(null);
+    }
+  };
+
+  const handleCreateClick = () => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    setCreateOpen(true);
+  };
+
+  const handleCreated = (roomId: string) => {
+    setCreateOpen(false);
+    router.push(`/rooms/${roomId}`);
+  };
+
+  const title = game?.title ?? 'Loading…';
 
   return (
     <div className="game-detail">
@@ -73,26 +128,40 @@ export default function GameDetailPage() {
         animate={{ opacity: 1 }}
       >
         <div className="game-banner-image">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', opacity: 0.5 }}>
+          <svg
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ color: 'var(--text-muted)', opacity: 0.5 }}
+          >
             <rect x="2" y="6" width="20" height="12" rx="2" />
             <path d="M6 12h4M8 10v4" />
             <circle cx="17" cy="10" r="1" />
             <circle cx="15" cy="12" r="1" />
           </svg>
         </div>
-        <h1 className="game-banner-title">{game.title}</h1>
+        <h1 className="game-banner-title">{title}</h1>
       </motion.div>
 
       <div className="game-detail-content">
         {/* Description */}
-        <p className="game-description">{game.description}</p>
+        {game?.description && (
+          <p className="game-description">{game.description}</p>
+        )}
 
         {/* Tags */}
-        <div className="game-tags">
-          {game.tags.map(tag => (
-            <span key={tag} className="game-tag">{tag}</span>
-          ))}
-        </div>
+        {game?.tags && game.tags.length > 0 && (
+          <div className="game-tags">
+            {game.tags.map((tag) => (
+              <span key={tag} className="game-tag">{tag}</span>
+            ))}
+          </div>
+        )}
 
         {/* Open Rooms */}
         <section className="game-section">
@@ -100,53 +169,90 @@ export default function GameDetailPage() {
             <h2 className="section-title">Open Rooms</h2>
           </div>
 
-          <div className="rooms-list">
-            {MOCK_ROOMS.map((room, i) => (
-              <motion.div
-                key={room.id}
-                className="room-card"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-              >
-                <div className="room-card-top">
-                  <div className="room-creator">
-                    <div className="room-avatar">{room.creator[0]}</div>
-                    <span className="room-username">@{room.creator}</span>
-                  </div>
-                  <span className="room-format">{room.format}</span>
-                </div>
+          {joinError && (
+            <div className="modal-error">{joinError}</div>
+          )}
 
-                <div className="room-card-bottom">
-                  <div className="room-money">
-                    <span className="room-fee">${room.entryFee}</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}>
-                      <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                    <span className="room-prize">${room.prizePool}</span>
-                  </div>
-                  <div className="room-spots">
-                    <div className="room-spots-bar">
-                      <div className="room-spots-fill" style={{ width: `${(room.currentPlayers / room.maxPlayers) * 100}%` }} />
-                    </div>
-                    <span className="room-spots-text">{room.currentPlayers}/{room.maxPlayers}</span>
-                  </div>
-                </div>
-
-                <button className="room-join-btn">Join</button>
-              </motion.div>
-            ))}
-          </div>
-
-          {MOCK_ROOMS.length === 0 && (
+          {roomsLoading ? (
             <div className="empty-state-inline">
-              <p>No open rooms yet</p>
+              <p>Loading rooms…</p>
+            </div>
+          ) : roomsError ? (
+            <div className="empty-state-inline">
+              <p>{roomsError}</p>
+            </div>
+          ) : rooms.length === 0 ? (
+            <div className="empty-state-inline">
+              <p>No open rooms yet — be the first to create one!</p>
+            </div>
+          ) : (
+            <div className="rooms-list">
+              {rooms.map((room, i) => {
+                const formatLabel = FORMAT_LABELS[room.format] ?? room.format;
+                const fillPct = (room.currentPlayers / room.maxPlayers) * 100;
+                const isJoining = joiningId === room.id;
+
+                return (
+                  <motion.div
+                    key={room.id}
+                    className="room-card"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                  >
+                    <div className="room-card-top">
+                      <div className="room-creator">
+                        <div className="room-avatar">{room.creator[0].toUpperCase()}</div>
+                        <span className="room-username">@{room.creator}</span>
+                      </div>
+                      <span className="room-format">{formatLabel}</span>
+                    </div>
+
+                    <div className="room-card-bottom">
+                      <div className="room-money">
+                        <span className="room-fee">${room.entryFee}</span>
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          style={{ color: 'var(--text-muted)' }}
+                        >
+                          <path d="M5 12h14M12 5l7 7-7 7" />
+                        </svg>
+                        <span className="room-prize">${room.prizePool}</span>
+                      </div>
+                      <div className="room-spots">
+                        <div className="room-spots-bar">
+                          <div
+                            className="room-spots-fill"
+                            style={{ width: `${fillPct}%` }}
+                          />
+                        </div>
+                        <span className="room-spots-text">
+                          {room.currentPlayers}/{room.maxPlayers}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      className="room-join-btn"
+                      onClick={() => handleJoin(room.id)}
+                      disabled={isJoining}
+                    >
+                      {isJoining ? 'Joining…' : 'Join'}
+                    </button>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
         </section>
 
         {/* Create Room Button */}
-        <button className="create-room-btn">
+        <button className="create-room-btn" onClick={handleCreateClick}>
           Create Room
         </button>
 
@@ -179,9 +285,18 @@ export default function GameDetailPage() {
 
         {/* Game Stats Footer */}
         <div className="game-stats-footer">
-          1,240 games played  &middot;  $12,450 paid out  &middot;  89 active players
+          1,240 games played &middot; $12,450 paid out &middot; 89 active players
         </div>
       </div>
+
+      {/* Create Room Modal */}
+      <CreateRoomModal
+        gameId={gameId}
+        gameTitle={title}
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={handleCreated}
+      />
     </div>
   );
 }
