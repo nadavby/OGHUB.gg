@@ -93,6 +93,15 @@ export class NowPayProvider implements PaymentProvider {
       throw new Error('NOWPayments only supports crypto payouts');
     }
 
+    // Map network to NOWPayments currency code
+    const NETWORK_TO_CURRENCY: Record<string, string> = {
+      TRC20: 'usdttrc20',
+      ERC20: 'usdterc20',
+      SOL: 'usdtsol',
+      BTC: 'btc',
+    };
+    const currency = NETWORK_TO_CURRENCY[recipient.network] || 'usdttrc20';
+
     const payout = await nowpayFetch<{
       id: string;
       status: string;
@@ -101,7 +110,7 @@ export class NowPayProvider implements PaymentProvider {
       body: JSON.stringify({
         address: recipient.address,
         amount,
-        currency: 'usdttrc20',
+        currency,
         ipn_callback_url: `${process.env.API_URL || 'http://localhost:3001'}/api/payments/webhooks/nowpayments`,
       }),
     });

@@ -65,8 +65,19 @@ export async function handleWebhookEvent(
   if (session.status === 'COMPLETED') return;
 
   if (event.status === 'completed') {
-    // Credit wallet in a transaction
+    // Credit wallet in a transaction with idempotency guard inside
     await prisma.$transaction(async (tx) => {
+      // Atomic idempotency: only proceed if session is not yet COMPLETED
+      const updated = await tx.checkoutSession.updateMany({
+        where: { id: session.id, status: { not: 'COMPLETED' } },
+        data: {
+          status: 'COMPLETED',
+          providerPaymentId: event.providerPaymentId,
+          completedAt: new Date(),
+        },
+      });
+      if (updated.count === 0) return; // already processed by concurrent request
+
       const wallet = await tx.wallet.findUnique({ where: { userId: session.userId } });
       if (!wallet) throw new AppError('Wallet not found', 404);
 
@@ -87,15 +98,6 @@ export async function handleWebhookEvent(
           balanceAfter: newBalance,
           description: `Deposit via ${provider === 'STRIPE' ? 'card' : 'crypto'}`,
           providerPaymentId: event.providerPaymentId,
-        },
-      });
-
-      await tx.checkoutSession.update({
-        where: { id: session.id },
-        data: {
-          status: 'COMPLETED',
-          providerPaymentId: event.providerPaymentId,
-          completedAt: new Date(),
         },
       });
     }, { isolationLevel: 'Serializable' });

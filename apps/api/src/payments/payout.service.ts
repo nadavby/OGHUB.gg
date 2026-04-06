@@ -39,6 +39,14 @@ export async function createPayoutRequest(
       throw new AppError('Insufficient available balance', 402);
     }
 
+    // Check for existing pending payout inside transaction to prevent TOCTOU race
+    const pendingPayout = await tx.payoutRequest.findFirst({
+      where: { userId, provider: provider as any, status: { in: ['PENDING_REVIEW', 'APPROVED', 'PROCESSING'] } },
+    });
+    if (pendingPayout) {
+      throw new AppError('You already have a pending withdrawal. Please wait for it to complete.', 409);
+    }
+
     await tx.wallet.update({
       where: { id: wallet.id },
       data: {
@@ -58,11 +66,12 @@ export async function createPayoutRequest(
       },
     });
 
+    // Store gross amount (before fee) so refunds restore the full deducted amount
     const payout = await tx.payoutRequest.create({
       data: {
         userId,
         provider: provider as any,
-        amount: new Decimal(netAmount),
+        amount: amountDecimal,
         recipientExternalId: recipient.type === 'crypto' ? recipient.address : undefined,
         status: 'PENDING_REVIEW',
       },
@@ -96,16 +105,17 @@ export async function processApprovedPayout(payoutId: string, recipient?: Recipi
       : { type: 'card_refund' as const }
   );
 
+  const grossAmount = parseFloat(payout.amount.toString());
+  const fee = WITHDRAWAL_FEE[payout.provider] || 0;
+  const netAmount = grossAmount - fee;
+
   try {
     await prisma.payoutRequest.update({
       where: { id: payoutId },
       data: { status: 'PROCESSING' },
     });
 
-    const result = await provider.createPayout(
-      parseFloat(payout.amount.toString()),
-      recipientDetails,
-    );
+    const result = await provider.createPayout(netAmount, recipientDetails);
 
     await prisma.payoutRequest.update({
       where: { id: payoutId },
@@ -116,14 +126,15 @@ export async function processApprovedPayout(payoutId: string, recipient?: Recipi
     });
 
     if (result.status === 'completed') {
-      await unfreezePayoutFunds(payout.userId, parseFloat(payout.amount.toString()));
+      // Unfreeze the gross amount (what was deducted from balance)
+      await unfreezePayoutFunds(payout.userId, grossAmount);
     }
   } catch (err: any) {
     await refundFailedPayout(payoutId, err.message || 'Provider payout failed');
   }
 }
 
-export async function refundFailedPayout(payoutId: string, reason: string): Promise<void> {
+export async function refundFailedPayout(payoutId: string, reason: string, opts?: { skipStatusUpdate?: boolean }): Promise<void> {
   const payout = await prisma.payoutRequest.findUnique({ where: { id: payoutId } });
   if (!payout) return;
 
@@ -153,10 +164,13 @@ export async function refundFailedPayout(payoutId: string, reason: string): Prom
       },
     });
 
-    await tx.payoutRequest.update({
-      where: { id: payoutId },
-      data: { status: 'FAILED', failureReason: reason },
-    });
+    // Skip status update when caller already set the status (e.g. admin reject)
+    if (!opts?.skipStatusUpdate) {
+      await tx.payoutRequest.update({
+        where: { id: payoutId },
+        data: { status: 'FAILED', failureReason: reason },
+      });
+    }
   }, { isolationLevel: 'Serializable' });
 }
 

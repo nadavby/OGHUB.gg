@@ -79,15 +79,17 @@ paymentRouter.post('/webhooks/stripe', async (req, res, next) => {
     await handleWebhookEvent('STRIPE', req.headers as any, req.body);
     res.json({ received: true });
   } catch (err: any) {
-    // Log but return 200 to prevent Stripe retries on non-retryable errors
     console.error('Stripe webhook error:', err.message);
-    res.status(200).json({ received: true, error: err.message });
+    // Return 400 for signature/verification failures so Stripe flags them
+    const isSignatureError = err.message?.includes('signature') || err.message?.includes('Webhook');
+    res.status(isSignatureError ? 400 : 200).json({ received: true, error: err.message });
   }
 });
 
 paymentRouter.post('/webhooks/nowpayments', async (req, res, next) => {
   try {
-    await handleWebhookEvent('COINBASE', req.headers as any, JSON.stringify(req.body));
+    // req.body is a raw Buffer thanks to express.raw() middleware
+    await handleWebhookEvent('COINBASE', req.headers as any, req.body);
     res.json({ received: true });
   } catch (err: any) {
     console.error('NOWPayments webhook error:', err.message);
@@ -203,8 +205,8 @@ paymentRouter.post('/admin/payouts/:id/reject', authGuard, roleGuard('ADMIN'), a
       data: { status: 'REJECTED', reviewedBy: req.user!.userId, reviewedAt: new Date(), reviewNote: reason || 'Rejected by admin' },
     });
 
-    // Refund to wallet
-    await refundFailedPayout(req.params.id, reason || 'Rejected by admin');
+    // Refund to wallet (skip status update — we already set REJECTED above)
+    await refundFailedPayout(req.params.id, reason || 'Rejected by admin', { skipStatusUpdate: true });
 
     res.json({ success: true, data: { message: 'Payout rejected, funds refunded' } });
   } catch (err) {

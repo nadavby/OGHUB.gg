@@ -46,19 +46,36 @@ async function getDailyTotal(walletId: string, type: 'DEPOSIT' | 'WITHDRAWAL'): 
 
 async function getMonthlyTotal(walletId: string): Promise<number> {
   const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const result = await prisma.walletTransaction.aggregate({
-    where: { walletId, type: { in: ['DEPOSIT', 'WITHDRAWAL'] }, createdAt: { gte: monthAgo } },
-    _sum: { amount: true },
-  });
-  return Math.abs(parseFloat((result._sum.amount ?? new Decimal(0)).toString()));
+  // Sum deposits and withdrawals separately to get gross volume (not net)
+  const [deposits, withdrawals] = await Promise.all([
+    prisma.walletTransaction.aggregate({
+      where: { walletId, type: 'DEPOSIT', createdAt: { gte: monthAgo } },
+      _sum: { amount: true },
+    }),
+    prisma.walletTransaction.aggregate({
+      where: { walletId, type: 'WITHDRAWAL', createdAt: { gte: monthAgo } },
+      _sum: { amount: true },
+    }),
+  ]);
+  const depositTotal = parseFloat((deposits._sum.amount ?? new Decimal(0)).toString());
+  const withdrawalTotal = Math.abs(parseFloat((withdrawals._sum.amount ?? new Decimal(0)).toString()));
+  return depositTotal + withdrawalTotal;
 }
 
 async function getCumulativeTotal(walletId: string): Promise<number> {
-  const result = await prisma.walletTransaction.aggregate({
-    where: { walletId, type: { in: ['DEPOSIT', 'WITHDRAWAL'] } },
-    _sum: { amount: true },
-  });
-  return Math.abs(parseFloat((result._sum.amount ?? new Decimal(0)).toString()));
+  const [deposits, withdrawals] = await Promise.all([
+    prisma.walletTransaction.aggregate({
+      where: { walletId, type: 'DEPOSIT' },
+      _sum: { amount: true },
+    }),
+    prisma.walletTransaction.aggregate({
+      where: { walletId, type: 'WITHDRAWAL' },
+      _sum: { amount: true },
+    }),
+  ]);
+  const depositTotal = parseFloat((deposits._sum.amount ?? new Decimal(0)).toString());
+  const withdrawalTotal = Math.abs(parseFloat((withdrawals._sum.amount ?? new Decimal(0)).toString()));
+  return depositTotal + withdrawalTotal;
 }
 
 export async function checkDepositAllowed(userId: string, amount: number, provider: string): Promise<void> {
