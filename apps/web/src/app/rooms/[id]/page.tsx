@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useRooms, RoomDetail } from '@/hooks/useRooms';
+import { useToast } from '@/components/Toast';
 
 const FORMAT_LABELS: Record<string, string> = {
   ONE_V_ONE: '1v1',
@@ -36,6 +37,7 @@ export default function RoomLobbyPage() {
   const router = useRouter();
   const { user, refreshWallet } = useAuth();
   const { getRoom, cancelRoom } = useRooms();
+  const { showToast } = useToast();
 
   const [room, setRoom] = useState<RoomDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,9 +80,11 @@ export default function RoomLobbyPage() {
     try {
       await cancelRoom(roomId);
       await refreshWallet();
+      showToast('Room cancelled — entry fee refunded', 'success');
       router.push(`/games/${room?.gameSlug || room?.gameId}`);
     } catch (err: any) {
       setError(err.message || 'Failed to cancel room');
+      showToast(err.message || 'Failed to cancel room', 'error');
     } finally {
       setCancelling(false);
     }

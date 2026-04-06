@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRooms, RoomListItem } from '@/hooks/useRooms';
 import { api } from '@/lib/api';
 import CreateRoomModal from '@/components/CreateRoomModal';
+import { useToast } from '@/components/Toast';
 
 interface LeaderboardEntry {
   rank: number;
@@ -55,6 +56,7 @@ export default function GameDetailPage() {
   const [joinError, setJoinError] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
+  const { showToast } = useToast();
 
   const gameId = params.id as string;
 
@@ -98,9 +100,11 @@ export default function GameDetailPage() {
     try {
       await joinRoom(roomId);
       await refreshWallet();
+      showToast('Joined room!', 'success');
       router.push(`/rooms/${roomId}`);
     } catch (err: any) {
       setJoinError(err.message || 'Failed to join room');
+      showToast(err.message || 'Something went wrong', 'error');
       setJoiningId(null);
     }
   };
@@ -115,6 +119,7 @@ export default function GameDetailPage() {
 
   const handleCreated = (roomId: string) => {
     setCreateOpen(false);
+    showToast('Room created!', 'success');
     router.push(`/rooms/${roomId}`);
   };
 

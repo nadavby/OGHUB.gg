@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWallet } from '@/hooks/useWallet';
 import { useRooms, RoomListItem } from '@/hooks/useRooms';
 import { api, getStoredToken } from '@/lib/api';
+import { useToast } from '@/components/Toast';
 
 interface UserStats {
   totalGames: number;
@@ -49,6 +50,7 @@ export default function ProfilePage() {
   const { wallet } = useWallet();
   const { listRooms } = useRooms();
   const router = useRouter();
+  const { showToast } = useToast();
 
   const [stats, setStats] = useState<UserStats | null>(null);
   const [history, setHistory] = useState<MatchHistoryItem[]>([]);
@@ -91,8 +93,10 @@ export default function ProfilePage() {
     try {
       await updateProfile({ displayName: editName || undefined });
       setEditing(false);
+      showToast('Profile updated', 'success');
     } catch (err) {
       console.error('Failed to update profile:', err);
+      showToast((err as any)?.message || 'Failed to update profile', 'error');
     } finally {
       setSaving(false);
     }
