@@ -28,6 +28,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, username: string, password: string) => Promise<void>;
   logout: () => void;
+  updateProfile: (data: { displayName?: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -103,8 +104,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setWallet(null);
   }, []);
 
+  const updateProfile = useCallback(async (data: { displayName?: string }) => {
+    const t = getStoredToken();
+    if (!t) throw new Error('Not authenticated');
+    const updated = await api<User>('/api/auth/me', { method: 'PATCH', body: data, token: t });
+    setUser(updated);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, wallet, walletLoading, refreshWallet, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, wallet, walletLoading, refreshWallet, login, register, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1353,6 +1353,62 @@ input, select, textarea {
   color: var(--danger);
 }
 
+/* --- Profile Edit ------------------------------------------------ */
+
+.profile-edit-form {
+  padding: var(--space-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+}
+
+.profile-edit-row {
+  margin-bottom: var(--space-md);
+}
+
+.profile-edit-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
+  display: block;
+}
+
+.profile-edit-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.profile-save-btn {
+  padding: 10px 24px;
+  background: var(--primary);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: white;
+  transition: background var(--transition-fast);
+}
+
+.profile-save-btn:hover {
+  background: var(--primary-hover);
+}
+
+.profile-cancel-btn {
+  padding: 10px 24px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.profile-cancel-btn:hover {
+  border-color: var(--border-hover);
+}
+
 /* --- Wallet Page ------------------------------------------------- */
 
 .wallet-page {

@@ -54,6 +54,7 @@ export interface ListRoomsParams {
   status?: string;
   page?: number;
   limit?: number;
+  mine?: boolean;
 }
 
 export interface CreateRoomParams {
@@ -94,6 +95,7 @@ export function useRooms() {
     if (params.status) query.set('status', params.status);
     if (params.page != null) query.set('page', String(params.page));
     if (params.limit != null) query.set('limit', String(params.limit));
+    if (params.mine) query.set('mine', 'true');
 
     const url = `${API_URL}/api/rooms${query.toString() ? `?${query.toString()}` : ''}`;
     const headers: Record<string, string> = {
