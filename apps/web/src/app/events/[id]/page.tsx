@@ -100,7 +100,7 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      {canEnter && (
+      {canEnter && !hasEntered && (
         <button className="event-enter-btn" onClick={handleEnter}>
           {parseFloat(challenge.entryFee) > 0 ? `Enter - $${challenge.entryFee}` : 'Enter Free'}
         </button>
@@ -128,8 +128,8 @@ export default function EventDetailPage() {
                 <span className={`lb-rank ${entry.rank === 1 ? 'lb-rank-first' : ''}`}>
                   #{entry.rank}
                 </span>
-                <div className="lb-avatar">{entry.username[0].toUpperCase()}</div>
-                <span className="lb-name">{entry.username}</span>
+                <div className="lb-avatar">{(entry.username ?? '?')[0].toUpperCase()}</div>
+                <span className="lb-name">{entry.username ?? 'Unknown'}</span>
                 <span className="lb-score">{entry.score.toLocaleString()}</span>
               </motion.div>
             ))}

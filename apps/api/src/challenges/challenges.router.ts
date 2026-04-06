@@ -7,8 +7,6 @@ import { validate } from '../common/schemas';
 
 export const challengesRouter = Router();
 
-challengesRouter.use(authGuard);
-
 // ─── Validation Schemas ──────────────────────────────────────
 
 const listChallengesSchema = z.object({
@@ -76,9 +74,11 @@ challengesRouter.get('/', async (req: AuthenticatedRequest, res, next) => {
 
 // ─── Get Challenge Detail ────────────────────────────────────
 
-challengesRouter.get('/:id', async (req: AuthenticatedRequest, res, next) => {
+const challengeIdSchema = z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/);
+
+challengesRouter.get('/:id', authGuard, async (req: AuthenticatedRequest, res, next) => {
   try {
-    const challengeId = req.params.id;
+    const challengeId = validate(challengeIdSchema, req.params.id);
     const userId = req.user!.userId;
 
     const challenge = await prisma.challenge.findUnique({
