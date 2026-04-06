@@ -38,6 +38,7 @@ export interface RoomDetail {
   status: string;
   expiresAt: string;
   participants: { userId: string; username: string; joinedAt: string }[];
+  readyPlayers?: string[];
   createdAt: string;
 }
 
@@ -151,5 +152,13 @@ export function useRooms() {
     });
   }, []);
 
-  return { listRooms, getRoom, createRoom, joinRoom, cancelRoom };
+  const readyRoom = useCallback(async (id: string): Promise<{ ready: boolean; readyCount: number }> => {
+    const token = getStoredToken();
+    return api<{ ready: boolean; readyCount: number }>(`/api/rooms/${id}/ready`, {
+      method: 'POST',
+      token: token ?? undefined,
+    });
+  }, []);
+
+  return { listRooms, getRoom, createRoom, joinRoom, cancelRoom, readyRoom };
 }
