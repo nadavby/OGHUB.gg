@@ -66,7 +66,7 @@ export const createRoomSchema = z.object({
 
 export const listRoomsSchema = z.object({
   gameId: z.string().optional(),
-  status: z.enum(['WAITING', 'READY', 'IN_PROGRESS', 'COMPLETED']).optional(),
+  status: z.enum(['WAITING', 'FULL', 'READY_CHECK', 'COUNTDOWN', 'IN_PROGRESS', 'SETTLING', 'COMPLETED', 'EXPIRED', 'CANCELLED']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });

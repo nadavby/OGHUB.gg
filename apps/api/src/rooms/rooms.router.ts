@@ -48,7 +48,7 @@ roomsRouter.post('/create', async (req: AuthenticatedRequest, res, next) => {
       const activeCount = await tx.roomParticipant.count({
         where: {
           userId,
-          room: { status: { in: ['WAITING', 'READY', 'IN_PROGRESS'] } },
+          room: { status: { in: ['WAITING', 'FULL', 'READY_CHECK', 'COUNTDOWN', 'IN_PROGRESS', 'SETTLING'] } },
         },
       });
       if (activeCount >= MAX_ACTIVE_ROOMS) {
@@ -246,7 +246,7 @@ roomsRouter.post('/:id/join', async (req: AuthenticatedRequest, res, next) => {
       const activeCount = await tx.roomParticipant.count({
         where: {
           userId,
-          room: { status: { in: ['WAITING', 'READY', 'IN_PROGRESS'] } },
+          room: { status: { in: ['WAITING', 'FULL', 'READY_CHECK', 'COUNTDOWN', 'IN_PROGRESS', 'SETTLING'] } },
         },
       });
       if (activeCount >= MAX_ACTIVE_ROOMS) {
@@ -316,7 +316,7 @@ roomsRouter.post('/:id/join', async (req: AuthenticatedRequest, res, next) => {
         where: { id: roomId },
         data: {
           prizePool: { increment: poolContribution },
-          ...(isFull ? { status: 'READY', readyAt: new Date() } : {}),
+          ...(isFull ? { status: 'FULL' as const } : {}),
         },
       });
 
@@ -330,7 +330,7 @@ roomsRouter.post('/:id/join', async (req: AuthenticatedRequest, res, next) => {
         roomId,
         currentPlayers: result.newPlayerCount,
         isFull: result.isFull,
-        status: result.isFull ? 'READY' : 'WAITING',
+        status: result.isFull ? 'FULL' : 'WAITING',
       },
     });
   } catch (err) {

@@ -188,6 +188,11 @@ model Game {
   definition    GameDefinition?
   rooms         Room[]
 
+  maxSessionDuration  Int     @default(600)
+  connectTimeout      Int     @default(60)
+  readyTimeout        Int     @default(30)
+  countdownDuration   Int     @default(5)
+
   @@index([slug])
   @@index([isActive, isFeatured])
 }
@@ -265,11 +270,23 @@ enum RoomFormat {
 
 enum RoomStatus {
   WAITING
-  READY
+  FULL
+  READY_CHECK
+  COUNTDOWN
   IN_PROGRESS
+  SETTLING
   COMPLETED
   EXPIRED
   CANCELLED
+}
+
+enum ParticipantOutcome {
+  WIN
+  LOSE
+  TIE_REFUND
+  CHEAT_DISQUALIFIED
+  NO_SHOW
+  NOT_READY
 }
 
 model Room {
@@ -288,6 +305,9 @@ model Room {
   readyAt         DateTime?
   startedAt       DateTime?
   completedAt     DateTime?
+  readyCheckAt    DateTime?
+  countdownAt     DateTime?
+  settledAt       DateTime?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -306,6 +326,12 @@ model RoomParticipant {
   userId    String
   joinedAt  DateTime  @default(now())
   sessionId String?
+  isReady       Boolean             @default(false)
+  readyAt       DateTime?
+  finalScore    Int?
+  finalRank     Int?
+  prizeAmount   Decimal?            @db.Decimal(12, 2)
+  outcome       ParticipantOutcome?
 
   room      Room      @relation(fields: [roomId], references: [id])
   user      User      @relation(fields: [userId], references: [id])
