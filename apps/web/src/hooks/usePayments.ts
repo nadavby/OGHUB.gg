@@ -37,12 +37,13 @@ export function usePayments() {
   const createCheckout = useCallback(async (
     amount: number,
     provider: 'STRIPE' | 'COINBASE',
+    coin?: string,
   ): Promise<CheckoutResult> => {
     const token = getStoredToken();
     if (!token) throw new Error('Not authenticated');
     return api<CheckoutResult>('/api/payments/checkout', {
       method: 'POST',
-      body: { amount, provider },
+      body: { amount, provider, ...(coin && { coin }) },
       token,
     });
   }, []);
@@ -99,5 +100,18 @@ export function usePayments() {
     poll();
   }, [getCheckoutStatus]);
 
-  return { createCheckout, getCheckoutStatus, pollCheckoutStatus, createPayout, getPayouts };
+  const testDeposit = useCallback(async (
+    amount: number,
+    provider: 'STRIPE' | 'COINBASE' = 'STRIPE',
+  ): Promise<{ balance: string; amount: string; message: string }> => {
+    const token = getStoredToken();
+    if (!token) throw new Error('Not authenticated');
+    return api<{ balance: string; amount: string; message: string }>('/api/payments/test-deposit', {
+      method: 'POST',
+      body: { amount, provider },
+      token,
+    });
+  }, []);
+
+  return { createCheckout, getCheckoutStatus, pollCheckoutStatus, createPayout, getPayouts, testDeposit };
 }

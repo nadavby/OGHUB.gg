@@ -25,6 +25,9 @@ export class NowPayProvider implements PaymentProvider {
   readonly name = 'COINBASE'; // Maps to PaymentProviderType enum in Prisma
 
   async createCheckout(userId: string, amount: number, currency: string, metadata?: Record<string, string>): Promise<CheckoutResult> {
+    // Use selected coin if provided, otherwise default to USDT
+    const payCurrency = metadata?.coin?.toLowerCase() || undefined;
+
     const invoice = await nowpayFetch<{
       id: string;
       invoice_url: string;
@@ -33,6 +36,7 @@ export class NowPayProvider implements PaymentProvider {
       body: JSON.stringify({
         price_amount: amount,
         price_currency: currency.toLowerCase(),
+        ...(payCurrency && { pay_currency: payCurrency }),
         order_id: `dep_${userId}_${Date.now()}`,
         order_description: 'OGHUB Wallet Deposit',
         ipn_callback_url: `${process.env.API_URL || 'http://localhost:3001'}/api/payments/webhooks/nowpayments`,

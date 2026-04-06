@@ -78,6 +78,39 @@ async function getCumulativeTotal(walletId: string): Promise<number> {
   return depositTotal + withdrawalTotal;
 }
 
+// ─── Anti-Fraud Helpers ──────────────────────────────────────
+
+async function checkFailedCheckoutCooldown(userId: string): Promise<void> {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const recentFailed = await prisma.checkoutSession.count({
+    where: { userId, status: 'FAILED', createdAt: { gte: oneHourAgo } },
+  });
+  if (recentFailed >= 3) {
+    throw new AppError('Too many failed checkout attempts. Please try again in an hour.', 429);
+  }
+}
+
+async function getDailyDepositCount(userId: string): Promise<number> {
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  return prisma.checkoutSession.count({
+    where: { userId, status: 'COMPLETED', completedAt: { gte: dayAgo } },
+  });
+}
+
+export async function checkNewCryptoAddress(userId: string, address: string, amount: number): Promise<{ requiresReview: boolean; reason?: string }> {
+  if (amount <= 200) return { requiresReview: false };
+
+  const previousPayout = await prisma.payoutRequest.findFirst({
+    where: { userId, recipientExternalId: address, status: 'COMPLETED' },
+  });
+  if (!previousPayout) {
+    return { requiresReview: true, reason: `Withdrawal >$200 to new crypto address: ${address}` };
+  }
+  return { requiresReview: false };
+}
+
+// ─── Deposit Checks ─────────────────────────────────────────
+
 export async function checkDepositAllowed(userId: string, amount: number, provider: string): Promise<void> {
   const limits = LIMITS_BY_PROVIDER[provider];
   if (!limits) throw new AppError(`Unsupported provider: ${provider}`, 400);
@@ -86,6 +119,9 @@ export async function checkDepositAllowed(userId: string, amount: number, provid
     throw new AppError(`Minimum deposit is $${limits.minDeposit} for this payment method`, 400);
   }
 
+  // Anti-fraud: failed checkout cooldown
+  await checkFailedCheckoutCooldown(userId);
+
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { kycTier: true } });
   if (!user) throw new AppError('User not found', 404);
 
@@ -93,11 +129,25 @@ export async function checkDepositAllowed(userId: string, amount: number, provid
   const wallet = await prisma.wallet.findUnique({ where: { userId } });
   if (!wallet) throw new AppError('Wallet not found', 404);
 
+  // Anti-fraud: velocity check — 5+ deposits in one day requires BASIC KYC
+  if (user.kycTier === 'UNVERIFIED') {
+    const dailyCount = await getDailyDepositCount(userId);
+    if (dailyCount >= 5) {
+      throw new AppError('Too many deposits today. Verify your identity to continue.', 403, {
+        requiresKyc: true,
+        requiredTier: 'BASIC',
+      });
+    }
+  }
+
   const effectiveDailyLimit = Math.min(limits.maxDepositPerDay, kycLimits.maxDepositPerDay);
   const dailyTotal = await getDailyTotal(wallet.id, 'DEPOSIT');
   if (dailyTotal + amount > effectiveDailyLimit) {
     if (kycLimits.maxDepositPerDay < limits.maxDepositPerDay) {
-      throw new AppError(`Daily deposit limit ($${kycLimits.maxDepositPerDay}) reached. Verify your identity to increase limits.`, 403);
+      throw new AppError(`Daily deposit limit ($${kycLimits.maxDepositPerDay}) reached. Verify your identity to increase limits.`, 403, {
+        requiresKyc: true,
+        requiredTier: user.kycTier === 'UNVERIFIED' ? 'BASIC' : 'FULL',
+      });
     }
     throw new AppError(`Daily deposit limit ($${effectiveDailyLimit}) reached`, 403);
   }
@@ -110,7 +160,10 @@ export async function checkDepositAllowed(userId: string, amount: number, provid
   if (kycLimits.cumulativeMax < Infinity) {
     const cumulativeTotal = await getCumulativeTotal(wallet.id);
     if (cumulativeTotal + amount > kycLimits.cumulativeMax) {
-      throw new AppError(`Cumulative limit ($${KYC_THRESHOLD}) reached. Verify your identity to continue.`, 403);
+      throw new AppError(`Cumulative limit ($${KYC_THRESHOLD}) reached. Verify your identity to continue.`, 403, {
+        requiresKyc: true,
+        requiredTier: 'BASIC',
+      });
     }
   }
 }
@@ -129,7 +182,10 @@ export async function checkWithdrawalAllowed(userId: string, amount: number, pro
   const kycLimits = KYC_TIER_LIMITS[user.kycTier];
 
   if (amount > 1000 && user.kycTier !== 'FULL') {
-    throw new AppError('Withdrawals over $1,000 require full identity verification.', 403);
+    throw new AppError('Withdrawals over $1,000 require full identity verification.', 403, {
+      requiresKyc: true,
+      requiredTier: 'FULL',
+    });
   }
 
   const wallet = await prisma.wallet.findUnique({ where: { userId } });
@@ -144,7 +200,10 @@ export async function checkWithdrawalAllowed(userId: string, amount: number, pro
   const dailyTotal = await getDailyTotal(wallet.id, 'WITHDRAWAL');
   if (dailyTotal + amount > effectiveDailyLimit) {
     if (kycLimits.maxWithdrawalPerDay < limits.maxWithdrawalPerDay) {
-      throw new AppError(`Daily withdrawal limit ($${kycLimits.maxWithdrawalPerDay}) reached. Verify your identity to increase limits.`, 403);
+      throw new AppError(`Daily withdrawal limit ($${kycLimits.maxWithdrawalPerDay}) reached. Verify your identity to increase limits.`, 403, {
+        requiresKyc: true,
+        requiredTier: user.kycTier === 'UNVERIFIED' ? 'BASIC' : 'FULL',
+      });
     }
     throw new AppError(`Daily withdrawal limit ($${effectiveDailyLimit}) reached`, 403);
   }
@@ -157,7 +216,10 @@ export async function checkWithdrawalAllowed(userId: string, amount: number, pro
   if (kycLimits.cumulativeMax < Infinity) {
     const cumulativeTotal = await getCumulativeTotal(wallet.id);
     if (cumulativeTotal + amount > kycLimits.cumulativeMax) {
-      throw new AppError(`Cumulative limit ($${KYC_THRESHOLD}) reached. Verify your identity to continue.`, 403);
+      throw new AppError(`Cumulative limit ($${KYC_THRESHOLD}) reached. Verify your identity to continue.`, 403, {
+        requiresKyc: true,
+        requiredTier: 'BASIC',
+      });
     }
   }
 
@@ -169,8 +231,8 @@ export async function checkWithdrawalAllowed(userId: string, amount: number, pro
   }
 }
 
-export async function checkCrossMethodFraud(userId: string, withdrawProvider: string): Promise<{ requiresReview: boolean; reason?: string }> {
-  if (withdrawProvider === 'STRIPE') return { requiresReview: false };
+export async function checkCrossMethodFraud(userId: string, withdrawProvider: string, amount: number): Promise<{ blocked: boolean; requiresReview: boolean; reason?: string }> {
+  if (withdrawProvider === 'STRIPE') return { blocked: false, requiresReview: false };
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const recentCardDeposit = await prisma.checkoutSession.findFirst({
@@ -178,10 +240,21 @@ export async function checkCrossMethodFraud(userId: string, withdrawProvider: st
   });
 
   if (recentCardDeposit) {
-    return { requiresReview: true, reason: 'Cross-method withdrawal: card deposit within 7 days, requesting crypto payout' };
+    // Block crypto withdrawals entirely within 7 days of card deposit
+    return { blocked: true, requiresReview: false, reason: 'Crypto withdrawals are not available within 7 days of a card deposit.' };
   }
 
-  return { requiresReview: false };
+  // After 7 days: flag for admin review if amount > $100
+  if (amount > 100) {
+    const anyCardDeposit = await prisma.checkoutSession.findFirst({
+      where: { userId, provider: 'STRIPE', status: 'COMPLETED' },
+    });
+    if (anyCardDeposit) {
+      return { blocked: false, requiresReview: true, reason: 'Cross-method withdrawal >$100: card depositor requesting crypto payout' };
+    }
+  }
+
+  return { blocked: false, requiresReview: false };
 }
 
 export async function checkInstantCashout(userId: string): Promise<boolean> {

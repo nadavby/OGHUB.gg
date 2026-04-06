@@ -24,6 +24,7 @@ const checkoutSchema = z.object({
   amount: z.number().positive().max(100000),
   provider: z.enum(['STRIPE', 'COINBASE']),
   currency: z.string().default('USD'),
+  coin: z.string().optional(),
 });
 
 const payoutSchema = z.object({
@@ -49,11 +50,11 @@ const payoutSchema = z.object({
 
 paymentRouter.post('/checkout', authGuard, checkoutLimiter, async (req: AuthenticatedRequest, res, next) => {
   try {
-    const { amount, provider, currency } = validate(checkoutSchema, req.body);
+    const { amount, provider, currency, coin } = validate(checkoutSchema, req.body);
 
     await checkDepositAllowed(req.user!.userId, amount, provider);
 
-    const result = await createCheckoutSession(req.user!.userId, amount, provider, currency);
+    const result = await createCheckoutSession(req.user!.userId, amount, provider, currency, coin);
 
     res.json({ success: true, data: result });
   } catch (err) {
@@ -143,6 +144,55 @@ paymentRouter.get('/payouts', authGuard, async (req: AuthenticatedRequest, res, 
     next(err);
   }
 });
+
+// ─── Test: Simulate Deposit (dev only) ────────────────────
+
+if (process.env.NODE_ENV !== 'production') {
+  const { Decimal } = require('@prisma/client/runtime/library');
+
+  paymentRouter.post('/test-deposit', authGuard, async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const { amount, provider } = validate(checkoutSchema, { ...req.body, provider: req.body.provider || 'STRIPE' });
+      const userId = req.user!.userId;
+
+      // Credit wallet directly — no external payment provider
+      const wallet = await prisma.wallet.findUnique({ where: { userId } });
+      if (!wallet) throw new AppError('Wallet not found', 404);
+
+      const depositAmount = new Decimal(amount);
+      const newBalance = wallet.balance.add(depositAmount);
+
+      await prisma.$transaction(async (tx: any) => {
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: { balance: newBalance },
+        });
+
+        await tx.walletTransaction.create({
+          data: {
+            walletId: wallet.id,
+            type: 'DEPOSIT',
+            amount: depositAmount,
+            balanceBefore: wallet.balance,
+            balanceAfter: newBalance,
+            description: `Test deposit via ${provider === 'STRIPE' ? 'card' : 'crypto'}`,
+          },
+        });
+      });
+
+      res.json({
+        success: true,
+        data: {
+          balance: newBalance.toString(),
+          amount: amount.toString(),
+          message: `Test deposit of $${amount.toFixed(2)} credited`,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+}
 
 // ─── Admin: Review Payouts ─────────────────────────────────
 

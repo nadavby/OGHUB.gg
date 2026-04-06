@@ -27,6 +27,7 @@ export class StripeProvider implements PaymentProvider {
         type: 'deposit',
         ...metadata,
       },
+      expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour
       success_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/wallet?checkout=success&session={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/wallet?checkout=cancelled`,
     });

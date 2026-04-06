@@ -29,12 +29,14 @@ const TX_TYPE_LABELS: Record<string, string> = {
 export default function WalletPage() {
   const { user, refreshWallet } = useAuth();
   const { wallet, fetchTransactions, loading } = useWallet();
-  const { getPayouts, pollCheckoutStatus } = usePayments();
+  const { getPayouts, pollCheckoutStatus, testDeposit } = usePayments();
   const { showToast } = useToast();
   const searchParams = useSearchParams();
 
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [testAmount, setTestAmount] = useState('50');
+  const [testLoading, setTestLoading] = useState(false);
 
   const [stats, setStats] = useState<WalletStats | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
@@ -169,6 +171,51 @@ export default function WalletPage() {
           <button className="wallet-btn wallet-btn-withdraw" onClick={() => setWithdrawOpen(true)}>Withdraw</button>
         </div>
       </motion.div>
+
+      {/* Test Deposit (dev only) */}
+      {process.env.NODE_ENV !== 'production' && (
+        <motion.div
+          className="test-deposit-bar"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.03 }}
+        >
+          <span className="test-deposit-label">Test Mode</span>
+          <div className="test-deposit-controls">
+            {[10, 25, 50, 100].map((a) => (
+              <button
+                key={a}
+                className={`quick-amount-btn ${testAmount === String(a) ? 'quick-amount-active' : ''}`}
+                onClick={() => setTestAmount(String(a))}
+                style={{ padding: '4px 10px', fontSize: 12 }}
+              >
+                ${a}
+              </button>
+            ))}
+            <button
+              className="wallet-btn wallet-btn-deposit"
+              style={{ padding: '6px 16px', fontSize: 13 }}
+              disabled={testLoading}
+              onClick={async () => {
+                const num = parseFloat(testAmount);
+                if (isNaN(num) || num <= 0) return;
+                setTestLoading(true);
+                try {
+                  const result = await testDeposit(num);
+                  showToast(result.message, 'success');
+                  refreshAll();
+                } catch (err: any) {
+                  showToast(err.message || 'Test deposit failed', 'error');
+                } finally {
+                  setTestLoading(false);
+                }
+              }}
+            >
+              {testLoading ? 'Adding...' : 'Add Funds'}
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Quick Stats */}
       <motion.div className="wallet-stats" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>

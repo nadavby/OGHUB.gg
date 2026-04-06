@@ -12,6 +12,7 @@ interface DepositModalProps {
 
 const CARD_AMOUNTS = [10, 25, 50, 100];
 const CRYPTO_AMOUNTS = [5, 25, 50, 100];
+const COINS = ['USDT', 'USDC', 'BTC', 'ETH'] as const;
 
 export default function DepositModal({ open, onClose }: DepositModalProps) {
   const { createCheckout } = usePayments();
@@ -19,6 +20,7 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
 
   const [tab, setTab] = useState<'card' | 'crypto'>('card');
   const [amount, setAmount] = useState('');
+  const [coin, setCoin] = useState<typeof COINS[number]>('USDT');
   const [loading, setLoading] = useState(false);
 
   const minAmount = tab === 'card' ? 10 : 5;
@@ -34,7 +36,7 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
     setLoading(true);
     try {
       const provider = tab === 'card' ? 'STRIPE' : 'COINBASE';
-      const result = await createCheckout(num, provider);
+      const result = await createCheckout(num, provider, tab === 'crypto' ? coin.toLowerCase() : undefined);
       // Redirect to payment page
       window.location.href = result.redirectUrl;
     } catch (err: any) {
@@ -83,6 +85,21 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
           </button>
         </div>
 
+        {/* Coin Selector (crypto tab only) */}
+        {tab === 'crypto' && (
+          <div className="network-select">
+            {COINS.map((c) => (
+              <button
+                key={c}
+                className={`network-btn ${coin === c ? 'network-btn-active' : ''}`}
+                onClick={() => setCoin(c)}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Quick Amounts */}
         <div className="quick-amounts">
           {quickAmounts.map((a) => (
@@ -110,7 +127,7 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
         </div>
 
         <p className="payment-note">
-          Min ${minAmount} &middot; {tab === 'card' ? 'No fees' : 'Network fee applies'}
+          Min ${minAmount} &middot; {tab === 'card' ? 'No fees' : `Pay with ${coin} · 0% fees`}
         </p>
 
         {/* Submit */}

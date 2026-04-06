@@ -18,12 +18,13 @@ export async function createCheckoutSession(
   amount: number,
   provider: string,
   currency: string = 'USD',
+  coin?: string,
 ): Promise<{ sessionId: string; redirectUrl: string }> {
   const paymentProvider = getProvider(provider);
   const idempotencyKey = `dep_${userId}_${Date.now()}`;
 
-  // Create provider checkout
-  const result = await paymentProvider.createCheckout(userId, amount, currency);
+  // Create provider checkout (pass coin as metadata for crypto providers)
+  const result = await paymentProvider.createCheckout(userId, amount, currency, coin ? { coin } : undefined);
 
   // Store in DB
   await prisma.checkoutSession.create({

@@ -4,7 +4,7 @@ import { AppError } from '../common/error-handler';
 import { stripeProvider } from './providers/stripe.provider';
 import { nowpayProvider } from './providers/nowpay.provider';
 import { PaymentProvider, RecipientDetails } from './providers/provider.interface';
-import { getAutoApproveThreshold, checkCrossMethodFraud, checkInstantCashout, WITHDRAWAL_FEE } from './limits.service';
+import { getAutoApproveThreshold, checkCrossMethodFraud, checkNewCryptoAddress, checkInstantCashout, WITHDRAWAL_FEE } from './limits.service';
 
 function getProvider(providerType: string): PaymentProvider {
   switch (providerType) {
@@ -80,10 +80,24 @@ export async function createPayoutRequest(
     return payout;
   }, { isolationLevel: 'Serializable' });
 
-  const threshold = getAutoApproveThreshold(provider);
-  const crossMethodCheck = await checkCrossMethodFraud(userId, provider);
+  // Cross-method fraud check
+  const crossMethodCheck = await checkCrossMethodFraud(userId, provider, amount);
+  if (crossMethodCheck.blocked) {
+    // Refund the frozen funds — this withdrawal is not allowed
+    await refundFailedPayout(payoutRequest.id, crossMethodCheck.reason || 'Cross-method withdrawal blocked');
+    throw new AppError(crossMethodCheck.reason || 'This withdrawal method is currently unavailable.', 403);
+  }
 
-  if (amount <= threshold && !crossMethodCheck.requiresReview) {
+  // New crypto address check
+  let newAddressFlag = false;
+  if (recipient.type === 'crypto') {
+    const addrCheck = await checkNewCryptoAddress(userId, recipient.address, amount);
+    if (addrCheck.requiresReview) newAddressFlag = true;
+  }
+
+  const threshold = getAutoApproveThreshold(provider);
+
+  if (amount <= threshold && !crossMethodCheck.requiresReview && !newAddressFlag) {
     await processApprovedPayout(payoutRequest.id, recipient);
     return { payoutId: payoutRequest.id, status: 'PROCESSING', estimatedTime: '1-24 hours' };
   }
