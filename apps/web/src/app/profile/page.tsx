@@ -46,7 +46,7 @@ const MOCK_ACHIEVEMENTS = [
 ];
 
 export default function ProfilePage() {
-  const { user, logout, updateProfile } = useAuth();
+  const { user, loading: authLoading, logout, updateProfile } = useAuth();
   const { wallet } = useWallet();
   const { listRooms } = useRooms();
   const router = useRouter();
@@ -83,10 +83,10 @@ export default function ProfilePage() {
   }, [user, fetchData]);
 
   useEffect(() => {
-    if (!user) router.push('/login?redirect=%2Fprofile');
-  }, [user, router]);
+    if (!authLoading && !user) router.push('/login?redirect=%2Fprofile');
+  }, [user, authLoading, router]);
 
-  if (!user) return null;
+  if (authLoading || !user) return null;
 
   const handleEdit = () => {
     setEditName(user.displayName || '');
