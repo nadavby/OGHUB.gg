@@ -130,14 +130,15 @@ roomsRouter.get('/', async (req: AuthenticatedRequest, res, next) => {
   try {
     const { gameId, status, page, limit } = validate(listRoomsSchema, req.query);
 
+    const mine = req.query.mine === 'true';
     const where: any = {};
     if (gameId) where.gameId = gameId;
     if (status) {
       where.status = status;
-    } else {
-      where.status = 'WAITING'; // Default: show rooms waiting for players
+    } else if (!mine) {
+      where.status = 'WAITING'; // Default for public lobby; mine=true shows all statuses
     }
-    if (req.query.mine === 'true') {
+    if (mine) {
       const userId = req.user!.userId;
       where.participants = { some: { userId } };
     }

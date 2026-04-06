@@ -76,9 +76,12 @@ export const withdrawalSchema = z.object({
 });
 
 export const updateProfileSchema = z.object({
-  displayName: z.string().max(50).optional(),
+  displayName: z.string().min(1).max(50).optional(),
   avatarUrl: z.string().url().optional().nullable(),
-});
+}).refine(
+  (data) => data.displayName !== undefined || data.avatarUrl !== undefined,
+  { message: 'At least one field must be provided' },
+);
 
 export function validate<T>(schema: z.ZodSchema<T>, data: unknown): T {
   const result = schema.safeParse(data);
