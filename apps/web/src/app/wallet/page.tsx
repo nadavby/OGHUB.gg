@@ -172,8 +172,8 @@ export default function WalletPage() {
         </div>
       </motion.div>
 
-      {/* Test Deposit (dev only) */}
-      {process.env.NODE_ENV !== 'production' && (
+      {/* Test Deposit */}
+      {(
         <motion.div
           className="test-deposit-bar"
           initial={{ opacity: 0, y: 12 }}

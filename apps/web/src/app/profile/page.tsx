@@ -71,7 +71,11 @@ export default function ProfilePage() {
 
     if (statsResult.status === 'fulfilled') setStats(statsResult.value);
     if (historyResult.status === 'fulfilled') setHistory(historyResult.value);
-    if (roomsResult.status === 'fulfilled') setActiveRooms(roomsResult.value.rooms);
+    if (roomsResult.status === 'fulfilled') {
+      setActiveRooms(roomsResult.value.rooms.filter(r =>
+        !['EXPIRED', 'CANCELLED', 'COMPLETED'].includes(r.status)
+      ));
+    }
   }, [listRooms]);
 
   useEffect(() => {
