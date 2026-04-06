@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import '@/styles/globals.css';
 import { AuthProvider } from '@/hooks/useAuth';
+import { ToastProvider } from '@/components/Toast';
 import BottomNav from '@/components/BottomNav';
 import WalletBadge from '@/components/WalletBadge';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import HeaderAvatar from '@/components/HeaderAvatar';
 
 export const metadata: Metadata = {
   title: 'OGHUB — Skill-Based Competition Platform',
@@ -24,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <AuthProvider>
+          <ToastProvider>
           <div className="app-shell">
             <ErrorBoundary section="header">
               <header className="app-header">
@@ -50,6 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <BottomNav />
             </ErrorBoundary>
           </div>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>
