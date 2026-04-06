@@ -15,6 +15,12 @@ enum UserRole {
   ADMIN
 }
 
+enum KycTier {
+  UNVERIFIED
+  BASIC
+  FULL
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -23,6 +29,7 @@ model User {
   displayName   String?
   avatarUrl     String?
   role          UserRole  @default(PLAYER)
+  kycTier       KycTier   @default(UNVERIFIED)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
