@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/Toast';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -14,6 +15,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const router = useRouter();
+  const { showToast } = useToast();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/';
 
@@ -24,6 +26,7 @@ export default function RegisterPage() {
 
     try {
       await register(email, username, password);
+      showToast(`Welcome to OGHUB, ${username}!`, 'success');
       router.push(redirectTo);
     } catch (err: any) {
       setError(err.message || 'Registration failed');
