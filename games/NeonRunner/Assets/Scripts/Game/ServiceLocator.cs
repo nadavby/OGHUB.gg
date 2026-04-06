@@ -25,8 +25,9 @@ namespace NeonRunner.Game
         {
             if (_instance == null)
             {
-                Debug.LogError($"[ServiceLocator] No instance. Cannot register {typeof(T).Name}");
-                return;
+                // Auto-create if no instance exists (handles script execution order)
+                var go = new GameObject("[ServiceLocator]");
+                _instance = go.AddComponent<ServiceLocator>();
             }
             _instance._services[typeof(T)] = service;
         }
@@ -35,7 +36,7 @@ namespace NeonRunner.Game
         {
             if (_instance == null || !_instance._services.TryGetValue(typeof(T), out var service))
             {
-                Debug.LogError($"[ServiceLocator] Service {typeof(T).Name} not registered");
+                Debug.LogWarning($"[ServiceLocator] Service {typeof(T).Name} not registered");
                 return null;
             }
             return (T)service;

@@ -83,7 +83,7 @@ namespace NeonRunner.Core
             int inputIndex = 0;
 
             // Run until the exact final tick
-            for (int tick = 0; tick <= replay.FinalTick; tick++)
+            for (int tick = 0; tick < replay.FinalTick; tick++)
             {
                 InputAction action = InputAction.None;
 

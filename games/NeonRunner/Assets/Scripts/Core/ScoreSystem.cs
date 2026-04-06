@@ -63,21 +63,21 @@ namespace NeonRunner.Core
         public void AddNearMiss(Fixed comboMultiplier, int obstacleBonus)
         {
             _nearMisses++;
-            int points = (int)((SCORE_NEAR_MISS + obstacleBonus) * comboMultiplier.ToFloat());
+            int points = (Fixed.FromInt(SCORE_NEAR_MISS + obstacleBonus) * comboMultiplier).ToInt();
             _totalScore += points;
         }
 
         public void AddPerfectDodge(Fixed comboMultiplier)
         {
             _perfectDodges++;
-            int points = (int)(SCORE_PERFECT_DODGE * comboMultiplier.ToFloat());
+            int points = (Fixed.FromInt(SCORE_PERFECT_DODGE) * comboMultiplier).ToInt();
             _totalScore += points;
         }
 
         public void AddSkillGate(Fixed comboMultiplier)
         {
             _skillGatesPassed++;
-            int points = (int)(SCORE_SKILL_GATE_BASE * comboMultiplier.ToFloat());
+            int points = (Fixed.FromInt(SCORE_SKILL_GATE_BASE) * comboMultiplier).ToInt();
             _totalScore += points;
         }
 

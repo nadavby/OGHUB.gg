@@ -43,11 +43,11 @@ namespace NeonRunner.Core
             // Binary search could be used, but sequential runs will just 
             // read forward linearly. For simplicity here, we assume an 
             // external playback iterator handles it, but this is a fallback.
-            for (int i = _recordedInputs.Count - 1; i >= 0; i--)
+            for (int i = 0; i < _recordedInputs.Count; i++)
             {
                 if (_recordedInputs[i].Tick == tick)
                     return _recordedInputs[i].Action;
-                if (_recordedInputs[i].Tick < tick)
+                if (_recordedInputs[i].Tick > tick)
                     break;
             }
             return InputAction.None;

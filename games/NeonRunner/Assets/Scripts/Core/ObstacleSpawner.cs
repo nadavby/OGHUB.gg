@@ -265,7 +265,6 @@ namespace NeonRunner.Core
             {
                 if (_obstacles[i].Position.Z < cutoff)
                 {
-                    _obstacles[i] = new ObstacleData { IsActive = false };
                     // Swap-remove for performance
                     _obstacles[i] = _obstacles[_obstacles.Count - 1];
                     _obstacles.RemoveAt(_obstacles.Count - 1);
