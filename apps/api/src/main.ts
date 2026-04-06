@@ -18,6 +18,7 @@ import { ghostsRouter } from './ghosts/ghosts.router';
 import { roomsRouter } from './rooms/rooms.router';
 import { gameRegistryRouter } from './game-registry/game-registry.router';
 import { challengesRouter } from './challenges/challenges.router';
+import { paymentRouter } from './payments/payment.router';
 import { errorHandler } from './common/error-handler';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './common/swagger';
@@ -61,6 +62,8 @@ app.use(cors({
   },
   credentials: true,
 }));
+// Stripe webhooks need raw body for signature verification
+app.use('/api/payments/webhooks/stripe', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '5mb' }));
 
 // ─── Health Check ───────────────────────────────────────────
@@ -94,6 +97,7 @@ app.use('/api/ghosts', ghostsRouter);
 app.use('/api/rooms', roomsRouter);
 app.use('/api/games', gameRegistryRouter);
 app.use('/api/challenges', challengesRouter);
+app.use('/api/payments', paymentRouter);
 
 // ─── Error Handler ──────────────────────────────────────────
 
