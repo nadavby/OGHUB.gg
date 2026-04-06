@@ -66,7 +66,9 @@ async function main() {
     createdGames.push(game);
   }
 
+  const oneDay = 24 * 60 * 60 * 1000;
   for (const game of createdGames) {
+    // Active challenge
     await prisma.challenge.upsert({
       where: { id: `seed-challenge-${game.slug}` },
       update: {},
@@ -80,8 +82,46 @@ async function main() {
         platformFee: 0.10,
         maxEntries: 100,
         status: 'ACTIVE',
-        startsAt: new Date(),
-        endsAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        startsAt: new Date(Date.now() - oneDay),
+        endsAt: new Date(Date.now() + oneDay),
+      },
+    });
+
+    // Upcoming challenge
+    await prisma.challenge.upsert({
+      where: { id: `seed-upcoming-${game.slug}` },
+      update: {},
+      create: {
+        id: `seed-upcoming-${game.slug}`,
+        gameId: game.id,
+        title: `${game.title} Weekend Sprint`,
+        description: `Higher stakes weekend event. Top 3 split the prize pool!`,
+        entryFee: 10.00,
+        prizePool: 0,
+        platformFee: 0.10,
+        maxEntries: 50,
+        status: 'UPCOMING',
+        startsAt: new Date(Date.now() + 3 * oneDay),
+        endsAt: new Date(Date.now() + 5 * oneDay),
+      },
+    });
+
+    // Completed challenge
+    await prisma.challenge.upsert({
+      where: { id: `seed-completed-${game.slug}` },
+      update: {},
+      create: {
+        id: `seed-completed-${game.slug}`,
+        gameId: game.id,
+        title: `${game.title} Free Friday`,
+        description: `Free entry community event. Great for practice!`,
+        entryFee: 0,
+        prizePool: 50.00,
+        platformFee: 0,
+        maxEntries: null,
+        status: 'COMPLETED',
+        startsAt: new Date(Date.now() - 3 * oneDay),
+        endsAt: new Date(Date.now() - oneDay),
       },
     });
   }
