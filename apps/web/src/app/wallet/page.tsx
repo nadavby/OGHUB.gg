@@ -1,11 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useWallet, WalletTransaction } from '@/hooks/useWallet';
+import { usePayments, PayoutItem, CheckoutStatus } from '@/hooks/usePayments';
 import { useToast } from '@/components/Toast';
 import { api, getStoredToken } from '@/lib/api';
+import DepositModal from '@/components/DepositModal';
+import WithdrawModal from '@/components/WithdrawModal';
 import Link from 'next/link';
 
 interface WalletStats {
@@ -23,22 +27,22 @@ const TX_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function WalletPage() {
-  const { user } = useAuth();
-  const { wallet, deposit, withdraw, fetchTransactions, loading } = useWallet();
+  const { user, refreshWallet } = useAuth();
+  const { wallet, fetchTransactions, loading } = useWallet();
+  const { getPayouts, pollCheckoutStatus } = usePayments();
   const { showToast } = useToast();
+  const searchParams = useSearchParams();
 
-  const [depositAmount, setDepositAmount] = useState('');
-  const [depositing, setDepositing] = useState(false);
-
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawing, setWithdrawing] = useState(false);
-  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   const [stats, setStats] = useState<WalletStats | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [txPage, setTxPage] = useState(1);
   const [txHasMore, setTxHasMore] = useState(false);
   const [txLoading, setTxLoading] = useState(false);
+
+  const [pendingPayouts, setPendingPayouts] = useState<PayoutItem[]>([]);
 
   const loadTransactions = useCallback(async (page: number, append = false) => {
     setTxLoading(true);
@@ -65,12 +69,52 @@ export default function WalletPage() {
     }
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      loadTransactions(1);
-      loadStats();
+  const loadPayouts = useCallback(async () => {
+    try {
+      const payouts = await getPayouts();
+      setPendingPayouts(payouts.filter(p =>
+        ['PENDING_REVIEW', 'APPROVED', 'PROCESSING'].includes(p.status)
+      ));
+    } catch (err) {
+      console.error('Failed to load payouts:', err);
     }
-  }, [user, loadTransactions, loadStats]);
+  }, [getPayouts]);
+
+  const refreshAll = useCallback(() => {
+    loadTransactions(1);
+    loadStats();
+    loadPayouts();
+    refreshWallet();
+  }, [loadTransactions, loadStats, loadPayouts, refreshWallet]);
+
+  useEffect(() => {
+    if (user) refreshAll();
+  }, [user, refreshAll]);
+
+  // Handle checkout return URL
+  useEffect(() => {
+    const checkoutResult = searchParams.get('checkout');
+    const sessionId = searchParams.get('session');
+
+    if (checkoutResult === 'success' && sessionId) {
+      showToast('Processing deposit...', 'info');
+      pollCheckoutStatus(sessionId, (status: CheckoutStatus) => {
+        if (status.status === 'COMPLETED') {
+          showToast(`$${status.amount} deposited!`, 'success');
+          refreshAll();
+        } else if (status.status === 'FAILED') {
+          showToast('Deposit failed. Please try again.', 'error');
+        } else if (status.status === 'EXPIRED') {
+          showToast('Deposit expired. Please try again.', 'error');
+        }
+      });
+      // Clean URL
+      window.history.replaceState({}, '', '/wallet');
+    } else if (checkoutResult === 'cancelled') {
+      showToast('Deposit cancelled', 'info');
+      window.history.replaceState({}, '', '/wallet');
+    }
+  }, [searchParams, pollCheckoutStatus, showToast, refreshAll]);
 
   if (!user) {
     return (
@@ -85,40 +129,9 @@ export default function WalletPage() {
     );
   }
 
-  const handleDeposit = async () => {
-    const amount = parseFloat(depositAmount);
-    if (isNaN(amount) || amount <= 0) return;
-    setDepositing(true);
-    try {
-      await deposit(amount);
-      setDepositAmount('');
-      showToast(`$${amount.toFixed(2)} deposited`, 'success');
-      loadTransactions(1);
-      loadStats();
-    } catch (err: any) {
-      showToast(err.message || 'Deposit failed', 'error');
-    } finally {
-      setDepositing(false);
-    }
-  };
-
-  const handleWithdraw = async () => {
-    const amount = parseFloat(withdrawAmount);
-    if (isNaN(amount) || amount <= 0) return;
-    setWithdrawing(true);
-    try {
-      await withdraw(amount);
-      setWithdrawAmount('');
-      setShowWithdraw(false);
-      showToast(`$${amount.toFixed(2)} withdrawal requested`, 'success');
-      loadTransactions(1);
-      loadStats();
-    } catch (err: any) {
-      showToast(err.message || 'Withdrawal failed', 'error');
-    } finally {
-      setWithdrawing(false);
-    }
-  };
+  const balance = wallet ? parseFloat(wallet.balance) : 0;
+  const frozen = wallet ? parseFloat(wallet.frozenBalance) : 0;
+  const available = balance - frozen;
 
   const formatTxAmount = (amount: string) => {
     const num = parseFloat(amount);
@@ -137,38 +150,28 @@ export default function WalletPage() {
 
   const isPositive = (type: string) => ['DEPOSIT', 'PRIZE_PAYOUT', 'REFUND'].includes(type);
 
+  const truncateAddress = (addr: string) =>
+    addr.length > 12 ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : addr;
+
   return (
     <div className="wallet-page">
       <h1 className="page-title">Wallet</h1>
 
       {/* Balance Card */}
-      <motion.div
-        className="wallet-balance-card"
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <div className="wallet-balance-amount">
-          ${wallet ? parseFloat(wallet.balance).toFixed(2) : '0.00'}
+      <motion.div className="wallet-balance-card" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="wallet-balance-amount">${available.toFixed(2)}</div>
+        <div className="wallet-balance-label">
+          Available Balance
+          {frozen > 0 && <span style={{ color: 'var(--primary)', marginLeft: 8 }}>(${frozen.toFixed(2)} pending)</span>}
         </div>
-        <div className="wallet-balance-label">Available Balance</div>
-
         <div className="wallet-actions">
-          <button className="wallet-btn wallet-btn-deposit" onClick={() => document.getElementById('deposit-input')?.focus()}>
-            Deposit
-          </button>
-          <button className="wallet-btn wallet-btn-withdraw" onClick={() => setShowWithdraw(!showWithdraw)}>
-            Withdraw
-          </button>
+          <button className="wallet-btn wallet-btn-deposit" onClick={() => setDepositOpen(true)}>Deposit</button>
+          <button className="wallet-btn wallet-btn-withdraw" onClick={() => setWithdrawOpen(true)}>Withdraw</button>
         </div>
       </motion.div>
 
       {/* Quick Stats */}
-      <motion.div
-        className="wallet-stats"
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-      >
+      <motion.div className="wallet-stats" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         <div className="wallet-stat">
           <span className="wallet-stat-value">${stats ? parseFloat(stats.totalDeposited).toFixed(2) : '0.00'}</span>
           <span className="wallet-stat-label">Deposited</span>
@@ -183,102 +186,36 @@ export default function WalletPage() {
         </div>
       </motion.div>
 
-      {/* Deposit */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="deposit-section"
-      >
-        <div className="deposit-row">
-          <input
-            id="deposit-input"
-            className="form-input"
-            type="number"
-            placeholder="Amount"
-            value={depositAmount}
-            onChange={(e) => setDepositAmount(e.target.value)}
-            min="1"
-            step="0.01"
-          />
-          <button
-            className="wallet-btn wallet-btn-deposit"
-            onClick={handleDeposit}
-            disabled={depositing}
-          >
-            {depositing ? 'Processing...' : 'Deposit'}
-          </button>
-        </div>
-
-        <div className="quick-amounts">
-          {[10, 25, 50, 100].map(amount => (
-            <button
-              key={amount}
-              className="quick-amount-btn"
-              onClick={() => setDepositAmount(amount.toString())}
-            >
-              ${amount}
-            </button>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Withdraw */}
-      <AnimatePresence>
-        {showWithdraw && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="deposit-section"
-          >
-            <div className="section-header">
-              <h2 className="section-title">Withdraw Funds</h2>
-            </div>
-            <div className="deposit-row">
-              <input
-                className="form-input"
-                type="number"
-                placeholder="Amount"
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
-                min="1"
-                step="0.01"
-              />
-              <button
-                className="wallet-btn wallet-btn-withdraw"
-                onClick={handleWithdraw}
-                disabled={withdrawing}
-              >
-                {withdrawing ? 'Processing...' : 'Withdraw'}
-              </button>
-            </div>
-            <p className="withdraw-note">Withdrawals may take 1-3 business days to process.</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Pending Withdrawals */}
+      {pendingPayouts.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <div className="section-header"><h2 className="section-title">Pending Withdrawals</h2></div>
+          <div className="payout-pending-list">
+            {pendingPayouts.map((p) => (
+              <div key={p.id} className="payout-pending-item">
+                <div>
+                  <span className="payout-pending-amount">${parseFloat(p.amount).toFixed(2)}</span>
+                  {p.recipientExternalId && (
+                    <span className="payout-pending-dest"> → {truncateAddress(p.recipientExternalId)}</span>
+                  )}
+                </div>
+                <span className="payout-pending-status">{p.status.replace('_', ' ').toLowerCase()}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Transaction History */}
       <section>
-        <div className="section-header">
-          <h2 className="section-title">Transactions</h2>
-        </div>
+        <div className="section-header"><h2 className="section-title">Transactions</h2></div>
         {transactions.length > 0 ? (
           <div className="transaction-list">
             {transactions.map((tx, i) => (
-              <motion.div
-                key={tx.id}
-                className="transaction-item"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-              >
+              <motion.div key={tx.id} className="transaction-item" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
                 <div className={`transaction-icon ${isPositive(tx.type) ? 'tx-positive' : 'tx-negative'}`}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    {isPositive(tx.type)
-                      ? <path d="M12 19V5M5 12l7-7 7 7" />
-                      : <path d="M12 5v14M5 12l7 7 7-7" />
-                    }
+                    {isPositive(tx.type) ? <path d="M12 19V5M5 12l7-7 7 7" /> : <path d="M12 5v14M5 12l7 7 7-7" />}
                   </svg>
                 </div>
                 <div className="transaction-info">
@@ -291,11 +228,7 @@ export default function WalletPage() {
               </motion.div>
             ))}
             {txHasMore && (
-              <button
-                className="load-more-btn"
-                onClick={() => loadTransactions(txPage + 1, true)}
-                disabled={txLoading}
-              >
+              <button className="load-more-btn" onClick={() => loadTransactions(txPage + 1, true)} disabled={txLoading}>
                 {txLoading ? 'Loading...' : 'Load More'}
               </button>
             )}
@@ -306,6 +239,21 @@ export default function WalletPage() {
           <div className="empty-state-inline"><p>No transactions yet</p></div>
         )}
       </section>
+
+      {/* Modals */}
+      <AnimatePresence>
+        {depositOpen && <DepositModal open={depositOpen} onClose={() => setDepositOpen(false)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {withdrawOpen && (
+          <WithdrawModal
+            open={withdrawOpen}
+            onClose={() => setWithdrawOpen(false)}
+            onSuccess={refreshAll}
+            availableBalance={available}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
