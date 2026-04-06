@@ -1597,36 +1597,111 @@ input, select, textarea {
 
 /* --- Events Page ------------------------------------------------- */
 
-.event-featured-card {
+.events-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.event-card {
+  padding: var(--space-md);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
+  transition: border-color var(--transition-fast);
+  cursor: pointer;
 }
 
-.event-featured-image {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background: var(--surface-elevated);
+.event-card:hover {
+  border-color: var(--border-hover);
+}
+
+.event-card-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
 }
 
-.event-featured-info {
-  padding: var(--space-md);
-}
-
-.event-featured-title {
+.event-title {
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 4px;
 }
 
-.event-featured-desc {
-  font-size: 0.875rem;
+.event-status-badge {
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.event-status-active {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--win);
+}
+
+.event-status-upcoming {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--trust);
+}
+
+.event-status-completed {
+  background: rgba(138, 138, 138, 0.15);
   color: var(--text-secondary);
+}
+
+.event-game {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.event-description {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+  line-height: 1.4;
+}
+
+.event-stats {
+  display: flex;
+  gap: var(--space-md);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border);
+}
+
+.event-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.event-stat-value {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.event-stat-value-prize {
+  color: var(--money);
+}
+
+.event-stat-label {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.event-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: var(--space-xs);
 }
 

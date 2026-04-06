@@ -1,44 +1,133 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useChallenges, ChallengeListItem } from '@/hooks/useChallenges';
+
+type Tab = 'ACTIVE' | 'UPCOMING' | 'COMPLETED';
+
+const TABS: { value: Tab; label: string }[] = [
+  { value: 'ACTIVE', label: 'Live' },
+  { value: 'UPCOMING', label: 'Upcoming' },
+  { value: 'COMPLETED', label: 'Past' },
+];
+
+const STATUS_CLASS: Record<string, string> = {
+  ACTIVE: 'event-status-active',
+  UPCOMING: 'event-status-upcoming',
+  COMPLETED: 'event-status-completed',
+  CANCELLED: 'event-status-completed',
+};
+
+function formatEventTime(startsAt: string | null, endsAt: string | null, status: string): string {
+  if (status === 'ACTIVE' && endsAt) {
+    const ms = new Date(endsAt).getTime() - Date.now();
+    if (ms <= 0) return 'Ending soon';
+    const hours = Math.floor(ms / 3600000);
+    const mins = Math.floor((ms % 3600000) / 60000);
+    if (hours > 24) return `${Math.floor(hours / 24)}d ${hours % 24}h remaining`;
+    if (hours > 0) return `${hours}h ${mins}m remaining`;
+    return `${mins}m remaining`;
+  }
+  if (status === 'UPCOMING' && startsAt) {
+    const date = new Date(startsAt);
+    return `Starts ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`;
+  }
+  if (status === 'COMPLETED' && endsAt) {
+    const date = new Date(endsAt);
+    return `Ended ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+  }
+  return '';
+}
 
 export default function EventsPage() {
+  const router = useRouter();
+  const { listChallenges } = useChallenges();
+  const [tab, setTab] = useState<Tab>('ACTIVE');
+  const [challenges, setChallenges] = useState<ChallengeListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    listChallenges({ status: tab, limit: 20 })
+      .then((result) => setChallenges(result.challenges))
+      .catch(() => setChallenges([]))
+      .finally(() => setLoading(false));
+  }, [tab, listChallenges]);
+
   return (
-    <div style={{ padding: 'var(--space-md)' }}>
+    <div style={{ padding: 'var(--space-md) 0' }}>
       <h1 className="page-title">Events</h1>
 
-      {/* Featured Event Placeholder */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="event-featured-card"
-      >
-        <div className="event-featured-image">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--text-muted)', opacity: 0.5 }}>
-            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C7 4 7 7 7 7" />
-            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5C17 4 17 7 17 7" />
-            <path d="M4 22h16" />
-            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22" />
-            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22" />
-            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-          </svg>
-        </div>
-        <div className="event-featured-info">
-          <h2 className="event-featured-title">Coming Soon</h2>
-          <p className="event-featured-desc">Platform-run tournaments with real prizes. Stay tuned.</p>
-        </div>
-      </motion.div>
-
-      {/* Event Tabs */}
-      <div className="tag-filter" style={{ marginTop: 'var(--space-lg)' }}>
-        <button className="tag-btn tag-btn-active">Live</button>
-        <button className="tag-btn">Upcoming</button>
-        <button className="tag-btn">Past</button>
+      <div className="events-tabs">
+        {TABS.map(t => (
+          <button
+            key={t.value}
+            className={`tag-btn ${tab === t.value ? 'tag-btn-active' : ''}`}
+            onClick={() => setTab(t.value)}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      <div className="empty-state">
-        <p>No events yet. Check back soon.</p>
-      </div>
+      {loading ? (
+        <div className="empty-state-inline"><p>Loading events...</p></div>
+      ) : challenges.length === 0 ? (
+        <div className="empty-state">
+          <p>{tab === 'ACTIVE' ? 'No live events right now' : tab === 'UPCOMING' ? 'No upcoming events' : 'No past events'}</p>
+        </div>
+      ) : (
+        challenges.map((c, i) => (
+          <motion.div
+            key={c.id}
+            className="event-card"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            onClick={() => router.push(`/events/${c.id}`)}
+          >
+            <div className="event-card-header">
+              <span className="event-title">{c.title}</span>
+              <span className={`event-status-badge ${STATUS_CLASS[c.status] || ''}`}>
+                {c.status === 'ACTIVE' ? 'Live' : c.status}
+              </span>
+            </div>
+
+            <div className="event-game">{c.gameTitle}</div>
+
+            {c.description && (
+              <div className="event-description">
+                {c.description.length > 120 ? c.description.slice(0, 120) + '...' : c.description}
+              </div>
+            )}
+
+            <div className="event-stats">
+              <div className="event-stat">
+                <span className="event-stat-value event-stat-value-prize">${c.prizePool}</span>
+                <span className="event-stat-label">Prize Pool</span>
+              </div>
+              <div className="event-stat">
+                <span className="event-stat-value">
+                  {parseFloat(c.entryFee) > 0 ? `$${c.entryFee}` : 'Free'}
+                </span>
+                <span className="event-stat-label">Entry</span>
+              </div>
+              <div className="event-stat">
+                <span className="event-stat-value">
+                  {c.entries}{c.maxEntries ? `/${c.maxEntries}` : ''}
+                </span>
+                <span className="event-stat-label">Entries</span>
+              </div>
+            </div>
+
+            <div className="event-time">
+              {formatEventTime(c.startsAt, c.endsAt, c.status)}
+            </div>
+          </motion.div>
+        ))
+      )}
     </div>
   );
 }
