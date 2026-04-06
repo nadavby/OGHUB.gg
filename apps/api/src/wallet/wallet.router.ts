@@ -35,6 +35,44 @@ walletRouter.get('/balance', async (req: AuthenticatedRequest, res, next) => {
   }
 });
 
+// ─── Wallet Stats ──────────────────────────────────────────
+
+walletRouter.get('/stats', async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const wallet = await prisma.wallet.findUnique({
+      where: { userId: req.user!.userId },
+    });
+
+    if (!wallet) throw new AppError('Wallet not found', 404);
+
+    const [depositSum, prizeSum, withdrawSum] = await Promise.all([
+      prisma.walletTransaction.aggregate({
+        where: { walletId: wallet.id, type: 'DEPOSIT' },
+        _sum: { amount: true },
+      }),
+      prisma.walletTransaction.aggregate({
+        where: { walletId: wallet.id, type: 'PRIZE_PAYOUT' },
+        _sum: { amount: true },
+      }),
+      prisma.walletTransaction.aggregate({
+        where: { walletId: wallet.id, type: 'WITHDRAWAL' },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        totalDeposited: (depositSum._sum.amount ?? new Decimal(0)).toString(),
+        totalWon: (prizeSum._sum.amount ?? new Decimal(0)).toString(),
+        totalWithdrawn: (withdrawSum._sum.amount ?? new Decimal(0)).abs().toString(),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ─── Deposit ────────────────────────────────────────────────
 
 walletRouter.post('/deposit', async (req: AuthenticatedRequest, res, next) => {
