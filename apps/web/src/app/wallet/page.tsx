@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useWallet, WalletTransaction } from '@/hooks/useWallet';
 import { useToast } from '@/components/Toast';
@@ -224,37 +224,39 @@ export default function WalletPage() {
       </motion.div>
 
       {/* Withdraw */}
-      {showWithdraw && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          className="deposit-section"
-        >
-          <div className="section-header">
-            <h2 className="section-title">Withdraw Funds</h2>
-          </div>
-          <div className="deposit-row">
-            <input
-              className="form-input"
-              type="number"
-              placeholder="Amount"
-              value={withdrawAmount}
-              onChange={(e) => setWithdrawAmount(e.target.value)}
-              min="1"
-              step="0.01"
-            />
-            <button
-              className="wallet-btn wallet-btn-withdraw"
-              onClick={handleWithdraw}
-              disabled={withdrawing}
-            >
-              {withdrawing ? 'Processing...' : 'Withdraw'}
-            </button>
-          </div>
-          <p className="withdraw-note">Withdrawals may take 1-3 business days to process.</p>
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {showWithdraw && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="deposit-section"
+          >
+            <div className="section-header">
+              <h2 className="section-title">Withdraw Funds</h2>
+            </div>
+            <div className="deposit-row">
+              <input
+                className="form-input"
+                type="number"
+                placeholder="Amount"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+                min="1"
+                step="0.01"
+              />
+              <button
+                className="wallet-btn wallet-btn-withdraw"
+                onClick={handleWithdraw}
+                disabled={withdrawing}
+              >
+                {withdrawing ? 'Processing...' : 'Withdraw'}
+              </button>
+            </div>
+            <p className="withdraw-note">Withdrawals may take 1-3 business days to process.</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Transaction History */}
       <section>
