@@ -73,10 +73,18 @@ walletRouter.get('/stats', async (req: AuthenticatedRequest, res, next) => {
   }
 });
 
-// ─── Deposit ────────────────────────────────────────────────
+// ─── Deposit (legacy — kept for dev/testing only) ──────────
 
 walletRouter.post('/deposit', async (req: AuthenticatedRequest, res, next) => {
   try {
+    // In production, deposits go through /api/payments/checkout
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(410).json({
+        success: false,
+        error: 'Direct deposits are no longer supported. Please use POST /api/payments/checkout instead.',
+      });
+    }
+
     const { amount } = validate(depositSchema, req.body);
     const depositAmount = new Decimal(amount);
 
@@ -101,7 +109,7 @@ walletRouter.post('/deposit', async (req: AuthenticatedRequest, res, next) => {
           amount: depositAmount,
           balanceBefore: wallet.balance,
           balanceAfter: newBalance,
-          description: 'Wallet deposit',
+          description: 'Wallet deposit (dev)',
         },
       });
 
@@ -121,41 +129,13 @@ walletRouter.post('/deposit', async (req: AuthenticatedRequest, res, next) => {
   }
 });
 
-// ─── Withdraw ──────────────────────────────────────────────
+// ─── Withdraw (legacy — redirects to payment system) ──────
 
 walletRouter.post('/withdraw', async (req: AuthenticatedRequest, res, next) => {
   try {
-    const { amount } = validate(withdrawalSchema, req.body);
-    const withdrawAmount = new Decimal(amount);
-
-    const result = await prisma.$transaction(async (tx) => {
-      const wallet = await tx.wallet.findUnique({ where: { userId: req.user!.userId } });
-      if (!wallet) throw new AppError('Wallet not found', 404);
-      if (wallet.balance.lt(withdrawAmount)) throw new AppError('Insufficient balance', 402);
-
-      const newBalance = wallet.balance.sub(withdrawAmount);
-      const updated = await tx.wallet.update({ where: { id: wallet.id }, data: { balance: newBalance } });
-      await tx.walletTransaction.create({
-        data: {
-          walletId: wallet.id,
-          type: 'WITHDRAWAL',
-          amount: withdrawAmount.neg(),
-          balanceBefore: wallet.balance,
-          balanceAfter: newBalance,
-          description: 'Withdrawal (pending manual processing)',
-        },
-      });
-      return updated;
-    }, { isolationLevel: 'Serializable' });
-
-    res.json({
-      success: true,
-      data: {
-        balance: result.balance.toString(),
-        frozenBalance: result.frozenBalance.toString(),
-        currency: result.currency,
-        message: 'Withdrawal request submitted. Processing may take 1-3 business days.',
-      },
+    res.status(410).json({
+      success: false,
+      error: 'Direct withdrawals are no longer supported. Please use POST /api/payments/payout instead.',
     });
   } catch (err) {
     next(err);
