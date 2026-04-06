@@ -37,7 +37,7 @@ walletRouter.get('/balance', async (req: AuthenticatedRequest, res, next) => {
 
 // ─── Deposit ────────────────────────────────────────────────
 
-walletRouter.post('/deposit', roleGuard('ADMIN'), async (req: AuthenticatedRequest, res, next) => {
+walletRouter.post('/deposit', async (req: AuthenticatedRequest, res, next) => {
   try {
     const { amount } = validate(depositSchema, req.body);
     const depositAmount = new Decimal(amount);
