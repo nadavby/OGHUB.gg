@@ -17,7 +17,7 @@ export default function WalletPage() {
       <div className="auth-page">
         <div className="empty-state">
           <p>Sign in to manage your wallet</p>
-          <Link href="/login" className="btn-primary" style={{ marginTop: 16, display: 'inline-block', padding: '12px 32px' }}>
+          <Link href="/login?redirect=%2Fwallet" className="btn-primary" style={{ marginTop: 16, display: 'inline-block', padding: '12px 32px' }}>
             Sign In
           </Link>
         </div>

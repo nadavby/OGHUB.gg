@@ -77,7 +77,7 @@ export default function ProfilePage() {
   }, [user, fetchData]);
 
   if (!user) {
-    router.push('/login');
+    router.push('/login?redirect=%2Fprofile');
     return null;
   }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,6 +14,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +24,7 @@ export default function RegisterPage() {
 
     try {
       await register(email, username, password);
-      router.push('/');
+      router.push(redirectTo);
     } catch (err: any) {
       setError(err.message || 'Registration failed');
     } finally {
@@ -96,7 +98,7 @@ export default function RegisterPage() {
         </form>
 
         <p className="auth-link">
-          Already have an account? <Link href="/login">Sign In</Link>
+          Already have an account? <Link href={`/login${redirectTo !== '/' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}>Sign In</Link>
         </p>
       </motion.div>
     </div>
