@@ -1949,3 +1949,123 @@ a.header-avatar {
   cursor: not-allowed;
 }
 
+/* ─── Payment Modals ────────────────────────────────────── */
+
+.payment-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: var(--space-md);
+}
+
+.payment-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.payment-tab:hover {
+  border-color: var(--border-hover);
+}
+
+.payment-tab-active {
+  background: var(--primary-dim);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.payment-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 8px 0 16px;
+}
+
+.quick-amount-active {
+  background: var(--primary-dim) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+}
+
+.btn-full {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.network-select {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.network-btn {
+  flex: 1;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.network-btn:hover {
+  border-color: var(--border-hover);
+}
+
+.network-btn-active {
+  background: var(--primary-dim);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.payout-pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.payout-pending-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.payout-pending-amount {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.payout-pending-dest {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.payout-pending-status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(249, 115, 22, 0.15);
+  color: var(--primary);
+}
+
