@@ -75,6 +75,11 @@ export const withdrawalSchema = z.object({
   amount: z.number().positive('Amount must be positive').max(10000, 'Amount exceeds maximum per withdrawal'),
 });
 
+export const updateProfileSchema = z.object({
+  displayName: z.string().max(50).optional(),
+  avatarUrl: z.string().url().optional().nullable(),
+});
+
 export function validate<T>(schema: z.ZodSchema<T>, data: unknown): T {
   const result = schema.safeParse(data);
   if (!result.success) {
