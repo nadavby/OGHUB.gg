@@ -82,10 +82,11 @@ export default function ProfilePage() {
     if (user) fetchData();
   }, [user, fetchData]);
 
-  if (!user) {
-    router.push('/login?redirect=%2Fprofile');
-    return null;
-  }
+  useEffect(() => {
+    if (!user) router.push('/login?redirect=%2Fprofile');
+  }, [user, router]);
+
+  if (!user) return null;
 
   const handleEdit = () => {
     setEditName(user.displayName || '');
