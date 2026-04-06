@@ -1705,3 +1705,98 @@ input, select, textarea {
   margin-top: var(--space-xs);
 }
 
+/* --- Event Detail ------------------------------------------------ */
+
+.event-detail-header {
+  padding: var(--space-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-md);
+}
+
+.event-detail-title {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.event-detail-game {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.event-detail-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--space-md);
+}
+
+.event-detail-stats {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-md) 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.event-detail-stat {
+  text-align: center;
+}
+
+.event-detail-stat-value {
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.event-detail-stat-value-prize {
+  color: var(--money);
+}
+
+.event-detail-stat-label {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-top: 2px;
+}
+
+.event-enter-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--primary);
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: white;
+  margin: var(--space-md) 0;
+  transition: background var(--transition-fast);
+}
+
+.event-enter-btn:hover {
+  background: var(--primary-hover);
+}
+
+.event-enter-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.event-user-status {
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.event-user-status-entered {
+  color: var(--win);
+}
+
