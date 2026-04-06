@@ -137,6 +137,10 @@ roomsRouter.get('/', async (req: AuthenticatedRequest, res, next) => {
     } else {
       where.status = 'WAITING'; // Default: show rooms waiting for players
     }
+    if (req.query.mine === 'true') {
+      const userId = req.user!.userId;
+      where.participants = { some: { userId } };
+    }
 
     const [rooms, total] = await Promise.all([
       prisma.room.findMany({
