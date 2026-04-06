@@ -32,6 +32,7 @@ export default function CreateRoomModal({ gameId, gameTitle, open, onClose, onCr
   const [error, setError] = useState<string | null>(null);
 
   const feeNum = parseFloat(fee) || 0;
+  // Must match PLATFORM_FEE_RATE in apps/api/src/rooms/rooms.router.ts
   const platformCut = feeNum * 0.05;
   const selectedFormat = FORMATS.find(f => f.value === format)!;
   const prizePool = ((feeNum - platformCut) * selectedFormat.players).toFixed(2);

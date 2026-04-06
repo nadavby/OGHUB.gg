@@ -2,10 +2,8 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { useWallet } from '@/hooks/useWallet';
-import { useRooms, RoomListItem } from '@/hooks/useRooms';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
 
 const MOCK_HISTORY = [
   { game: 'Neon Runner', opponent: 'GameMaster99', format: '1v1', result: 'W', score: '15,420', money: '+$4.50', date: '2h ago' },
@@ -23,43 +21,13 @@ const MOCK_ACHIEVEMENTS = [
   { label: 'Top 3 Monthly', earned: false },
 ];
 
-const FORMAT_LABELS: Record<string, string> = {
-  ONE_V_ONE: '1v1',
-  BEST_OF_3: 'Bo3',
-  FFA_5: 'FFA 5',
-  FFA_10: 'FFA 10',
-  FFA_20: 'FFA 20',
-};
-
 export default function ProfilePage() {
   const { user, logout } = useAuth();
   const { wallet } = useWallet();
-  const { listRooms } = useRooms();
   const router = useRouter();
 
-  const [activeRooms, setActiveRooms] = useState<RoomListItem[]>([]);
-  const [roomsLoading, setRoomsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user) return;
-
-    setRoomsLoading(true);
-    Promise.all([
-      listRooms({ status: 'WAITING', limit: 50 }),
-      listRooms({ status: 'READY', limit: 50 }),
-      listRooms({ status: 'IN_PROGRESS', limit: 50 }),
-    ])
-      .then(([waiting, ready, inProgress]) => {
-        const combined = [
-          ...waiting.rooms,
-          ...ready.rooms,
-          ...inProgress.rooms,
-        ];
-        setActiveRooms(combined);
-      })
-      .catch(() => setActiveRooms([]))
-      .finally(() => setRoomsLoading(false));
-  }, [user]);
+  // TODO: Active rooms requires a "my rooms" API endpoint (GET /api/rooms?mine=true)
+  // Currently the rooms list API has no user filter, so we show a placeholder
 
   if (!user) {
     router.push('/login');
@@ -100,53 +68,14 @@ export default function ProfilePage() {
         </div>
       </motion.div>
 
-      {/* Active Rooms */}
+      {/* Active Rooms — requires "my rooms" API endpoint */}
       <section className="profile-section">
         <div className="section-header">
           <h2 className="section-title">Your Active Rooms</h2>
         </div>
-        {roomsLoading ? (
-          <div className="empty-state-inline">
-            <p>Loading rooms...</p>
-          </div>
-        ) : activeRooms.length === 0 ? (
-          <div className="empty-state-inline">
-            <p>No active rooms</p>
-          </div>
-        ) : (
-          <div className="rooms-list">
-            {activeRooms.map((room, i) => (
-              <motion.div
-                key={room.id}
-                className="room-row"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                onClick={() => router.push(`/rooms/${room.id}`)}
-              >
-                <div className="room-avatar">
-                  {room.gameTitle[0].toUpperCase()}
-                </div>
-                <div className="room-info">
-                  <div className="room-username">{room.gameTitle}</div>
-                  <div className="room-meta">
-                    {FORMAT_LABELS[room.format] ?? room.format}
-                    {' \u00b7 '}
-                    {room.currentPlayers}/{room.maxPlayers} players
-                    {' \u00b7 '}
-                    ${room.entryFee} entry
-                  </div>
-                </div>
-                <div className="room-right">
-                  <div className={`room-status room-status-${room.status.toLowerCase().replace('_', '-')}`}>
-                    {room.status === 'WAITING' ? 'Waiting' : room.status === 'READY' ? 'Ready' : 'In Progress'}
-                  </div>
-                  <div className="room-prize">${room.prizePool} pool</div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
+        <div className="empty-state-inline">
+          <p>No active rooms</p>
+        </div>
       </section>
 
       {/* Match History */}

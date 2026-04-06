@@ -34,9 +34,8 @@ function formatTimeLeft(expiresAt: string): string {
 export default function RoomLobbyPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshWallet } = useAuth();
   const { getRoom, cancelRoom } = useRooms();
-  const { refreshWallet } = useAuth();
 
   const [room, setRoom] = useState<RoomDetail | null>(null);
   const [loading, setLoading] = useState(true);

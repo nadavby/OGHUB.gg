@@ -127,9 +127,9 @@ export default function HomePage() {
                     <div className="room-card-bottom">
                       <div className="room-money">
                         <span className="room-fee">
-                          {room.entryFee > 0 ? `$${room.entryFee}` : 'Free'}
+                          {parseFloat(room.entryFee) > 0 ? `$${room.entryFee}` : 'Free'}
                         </span>
-                        {room.prizePool > 0 && (
+                        {parseFloat(room.prizePool) > 0 && (
                           <span className="room-prize">${room.prizePool} prize</span>
                         )}
                       </div>
