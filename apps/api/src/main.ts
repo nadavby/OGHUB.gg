@@ -26,6 +26,7 @@ import { startEventDrainWorker } from './events/event-pipeline';
 import { startChallengeLifecycleWorker } from './challenges/challenge-lifecycle';
 import { startRoomLifecycleWorker } from './rooms/room-lifecycle';
 import { attachLiveValidator } from './live-validation/live-validator';
+import { attachRoomWebSocket } from './rooms/room-ws';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
 
@@ -123,6 +124,9 @@ const server = app.listen(PORT, () => {
 
 // Attach WebSocket live validation server
 attachLiveValidator(server);
+
+// Attach room WebSocket server
+attachRoomWebSocket(server);
 
 async function gracefulShutdown(signal: string) {
   console.log(`\n${signal} received. Shutting down gracefully...`);

@@ -323,6 +323,27 @@ sessionsRouter.post('/:id/end', enhancedHmacGuard, async (req: AuthenticatedRequ
       return scoreRecord;
     }, { isolationLevel: 'Serializable' });
 
+    // Check if this session belongs to a room and if room should settle
+    const roomParticipant = await prisma.roomParticipant.findFirst({
+      where: { sessionId: session.id },
+    });
+    if (roomParticipant) {
+      const { publishRoomEvent } = await import('../rooms/room-redis');
+      const { checkAllSessionsTerminal, transitionToSettling } = await import('../rooms/room-state-machine');
+      const { settleRoom } = await import('../rooms/room-settlement');
+
+      await publishRoomEvent(roomParticipant.roomId, {
+        type: 'player_finished',
+        userId: session.userId,
+        score: result.value ?? 0,
+      });
+
+      if (await checkAllSessionsTerminal(roomParticipant.roomId)) {
+        await transitionToSettling(roomParticipant.roomId);
+        await settleRoom(roomParticipant.roomId);
+      }
+    }
+
     // Update leaderboard in Redis
     if (isValid && session.challengeId) {
       await redis.zadd(

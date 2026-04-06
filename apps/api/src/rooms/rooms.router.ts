@@ -323,6 +323,24 @@ roomsRouter.post('/:id/join', async (req: AuthenticatedRequest, res, next) => {
       return { isFull, newPlayerCount };
     }, { isolationLevel: 'Serializable' });
 
+    // Publish join event + trigger ready check if full (outside transaction)
+    const { publishRoomEvent } = await import('./room-redis');
+    const joiner = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { username: true, displayName: true },
+    });
+    await publishRoomEvent(roomId, {
+      type: 'player_joined',
+      userId,
+      displayName: joiner?.displayName || joiner?.username || userId,
+      slot: result.newPlayerCount,
+    });
+
+    if (result.isFull) {
+      const { transitionToReadyCheck } = await import('./room-state-machine');
+      await transitionToReadyCheck(roomId);
+    }
+
     res.json({
       success: true,
       data: {
@@ -394,6 +412,53 @@ roomsRouter.post('/:id/cancel', async (req: AuthenticatedRequest, res, next) => 
     }, { isolationLevel: 'Serializable' });
 
     res.json({ success: true, data: { cancelled: true } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Ready Up ─────────────────────────────────────────────────
+
+roomsRouter.post('/:id/ready', async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const roomId = req.params.id;
+
+    // Verify room is in READY_CHECK
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+      include: { game: true },
+    });
+    if (!room) throw new AppError('Room not found', 404);
+    if (room.status !== 'READY_CHECK') {
+      throw new AppError('Room is not in ready check phase', 400);
+    }
+
+    // Verify user is participant
+    const participant = await prisma.roomParticipant.findUnique({
+      where: { roomId_userId: { roomId, userId } },
+    });
+    if (!participant) throw new AppError('You are not in this room', 403);
+
+    // Add to ready set (idempotent)
+    const { addReady, publishRoomEvent } = await import('./room-redis');
+    const readyCount = await addReady(roomId, userId);
+
+    // Update DB
+    await prisma.roomParticipant.update({
+      where: { id: participant.id },
+      data: { isReady: true, readyAt: new Date() },
+    });
+
+    await publishRoomEvent(roomId, { type: 'player_ready', userId });
+
+    // Check if all ready
+    if (readyCount >= room.maxPlayers) {
+      const { transitionToCountdown } = await import('./room-state-machine');
+      await transitionToCountdown(roomId);
+    }
+
+    res.json({ success: true, data: { ready: true, readyCount } });
   } catch (err) {
     next(err);
   }
