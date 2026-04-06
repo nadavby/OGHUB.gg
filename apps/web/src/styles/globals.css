@@ -1901,3 +1901,21 @@ input, select, textarea {
   border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
+/* ─── Header Avatar ──────────────────────────────────────── */
+
+.header-avatar-active {
+  background: var(--primary);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+a.header-avatar {
+  text-decoration: none;
+  color: inherit;
+}
+
