@@ -2100,3 +2100,231 @@ a.header-avatar {
   justify-content: flex-end;
 }
 
+/* ─── Room Lifecycle ─────────────────────────────────── */
+
+.room-ready-check {
+  text-align: center;
+  padding: var(--space-lg) 0;
+}
+
+.room-ready-header h2 {
+  font-size: 1.5rem;
+  color: var(--color-success);
+  margin-bottom: var(--space-sm);
+}
+
+.room-ready-timer {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-warning);
+  font-variant-numeric: tabular-nums;
+}
+
+.room-ready-players {
+  margin: var(--space-lg) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.room-ready-player {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.room-ready-player.is-ready {
+  border-color: var(--color-success);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.room-ready-indicator {
+  font-size: 1.2rem;
+  width: 24px;
+}
+
+.room-ready-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.room-ready-status {
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+.room-ready-player.is-ready .room-ready-status {
+  color: var(--color-success);
+  opacity: 1;
+  font-weight: 600;
+}
+
+.room-ready-btn {
+  margin-top: var(--space-lg);
+  padding: var(--space-md) var(--space-xl);
+  font-size: 1.3rem;
+  font-weight: 700;
+  background: var(--color-success);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  width: 100%;
+  max-width: 400px;
+}
+
+.room-ready-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.room-ready-waiting {
+  margin-top: var(--space-lg);
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+
+/* Countdown */
+.room-countdown {
+  text-align: center;
+  padding: var(--space-xxl) 0;
+}
+
+.room-countdown-label {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+.room-countdown-sublabel {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin: var(--space-sm) 0 var(--space-xl);
+}
+
+.room-countdown-number {
+  font-size: 6rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+/* Settling */
+.room-settling {
+  text-align: center;
+  padding: var(--space-xxl) 0;
+}
+
+.room-settling-spinner {
+  font-size: 3rem;
+  display: inline-block;
+}
+
+.room-settling-text {
+  margin-top: var(--space-md);
+  font-size: 1.2rem;
+  color: var(--text-muted);
+}
+
+/* Results */
+.room-results {
+  text-align: center;
+  padding: var(--space-lg) 0;
+}
+
+.room-results-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: var(--space-lg);
+}
+
+.room-results-reason {
+  color: var(--text-muted);
+  margin-bottom: var(--space-md);
+}
+
+.room-results-refund {
+  color: var(--color-success);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: var(--space-lg);
+}
+
+.room-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.room-results-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.room-results-row.is-you {
+  border-color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.room-results-rank {
+  font-size: 1.5rem;
+  width: 40px;
+}
+
+.room-results-name {
+  flex: 1;
+  font-weight: 500;
+  text-align: left;
+}
+
+.room-results-prize {
+  font-weight: 700;
+  color: var(--color-success);
+  font-size: 1.1rem;
+}
+
+.room-results-btn {
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* In Progress */
+.room-in-progress {
+  text-align: center;
+  padding: var(--space-xl) 0;
+  color: var(--text-muted);
+}
+
+.room-rejoin-btn {
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--color-warning);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.room-connection-status {
+  text-align: center;
+  color: var(--color-warning);
+  font-size: 0.85rem;
+  padding: var(--space-xs) 0;
+}
+
