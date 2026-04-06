@@ -17,6 +17,7 @@ import { leaderboardRouter } from './leaderboards/leaderboard.router';
 import { ghostsRouter } from './ghosts/ghosts.router';
 import { roomsRouter } from './rooms/rooms.router';
 import { gameRegistryRouter } from './game-registry/game-registry.router';
+import { challengesRouter } from './challenges/challenges.router';
 import { errorHandler } from './common/error-handler';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './common/swagger';
@@ -92,6 +93,7 @@ app.use('/api/leaderboards', leaderboardRouter);
 app.use('/api/ghosts', ghostsRouter);
 app.use('/api/rooms', roomsRouter);
 app.use('/api/games', gameRegistryRouter);
+app.use('/api/challenges', challengesRouter);
 
 // ─── Error Handler ──────────────────────────────────────────
 
