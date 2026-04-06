@@ -41,7 +41,7 @@ const MOCK_LEADERBOARD: LeaderboardEntry[] = [
 export default function GameDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshWallet } = useAuth();
   const { listRooms, joinRoom } = useRooms();
 
   const [game, setGame] = useState<GameDetail | null>(null);
@@ -97,6 +97,7 @@ export default function GameDetailPage() {
     setJoinError(null);
     try {
       await joinRoom(roomId);
+      await refreshWallet();
       router.push(`/rooms/${roomId}`);
     } catch (err: any) {
       setJoinError(err.message || 'Failed to join room');

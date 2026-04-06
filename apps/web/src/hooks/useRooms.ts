@@ -59,7 +59,7 @@ export interface ListRoomsParams {
 export interface CreateRoomParams {
   gameId: string;
   format: string;
-  entryFee: string;
+  entryFee: number;
 }
 
 export interface CreateRoomResult {
