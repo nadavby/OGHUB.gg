@@ -190,7 +190,7 @@ roomsRouter.get('/', async (req: AuthenticatedRequest, res, next) => {
 roomsRouter.get('/:id', async (req: AuthenticatedRequest, res, next) => {
   try {
     const room = await prisma.room.findUnique({
-      where: { id: req.params.id },
+      where: { id: (req.params.id as string) },
       include: {
         game: { select: { title: true, slug: true } },
         createdBy: { select: { username: true, displayName: true } },
@@ -239,7 +239,7 @@ roomsRouter.get('/:id', async (req: AuthenticatedRequest, res, next) => {
 roomsRouter.post('/:id/join', async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = req.user!.userId;
-    const roomId = req.params.id;
+    const roomId = (req.params.id as string);
 
     const result = await prisma.$transaction(async (tx) => {
       // Check active room limit inside transaction to prevent race conditions
@@ -361,7 +361,7 @@ roomsRouter.post('/:id/join', async (req: AuthenticatedRequest, res, next) => {
 roomsRouter.post('/:id/cancel', async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = req.user!.userId;
-    const roomId = req.params.id;
+    const roomId = (req.params.id as string);
 
     const result = await prisma.$transaction(async (tx) => {
       const room = await tx.room.findUnique({
@@ -422,7 +422,7 @@ roomsRouter.post('/:id/cancel', async (req: AuthenticatedRequest, res, next) => 
 roomsRouter.post('/:id/ready', async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = req.user!.userId;
-    const roomId = req.params.id;
+    const roomId = (req.params.id as string);
 
     // Verify room is in READY_CHECK
     const room = await prisma.room.findUnique({

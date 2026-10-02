@@ -1,7 +1,12 @@
 import Stripe from 'stripe';
 import { PaymentProvider, CheckoutResult, WebhookResult, PayoutResult, RecipientDetails } from './provider.interface';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+// stripe v22's CJS typings expose the constructor as a plain function type
+type StripeClient = Stripe.Stripe;
+type CheckoutSession = Awaited<ReturnType<StripeClient['checkout']['sessions']['retrieve']>>;
+const StripeCtor = Stripe as unknown as new (key: string, config?: Record<string, unknown>) => StripeClient;
+
+const stripe = new StripeCtor(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-03-25.dahlia',
 });
 
@@ -46,7 +51,7 @@ export class StripeProvider implements PaymentProvider {
       throw new Error(`Unhandled event type: ${event.type}`);
     }
 
-    const session = event.data.object as Stripe.Checkout.Session;
+    const session = event.data.object as CheckoutSession;
 
     let status: 'completed' | 'failed' | 'expired';
     if (event.type === 'checkout.session.completed' && session.payment_status === 'paid') {

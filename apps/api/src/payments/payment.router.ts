@@ -66,7 +66,7 @@ paymentRouter.post('/checkout', authGuard, checkoutLimiter, async (req: Authenti
 
 paymentRouter.get('/checkout/:sessionId/status', authGuard, statusLimiter, async (req: AuthenticatedRequest, res, next) => {
   try {
-    const result = await getCheckoutStatus(req.params.sessionId, req.user!.userId);
+    const result = await getCheckoutStatus((req.params.sessionId as string), req.user!.userId);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -225,17 +225,17 @@ paymentRouter.get('/admin/payouts', authGuard, roleGuard('ADMIN'), async (req: A
 
 paymentRouter.post('/admin/payouts/:id/approve', authGuard, roleGuard('ADMIN'), async (req: AuthenticatedRequest, res, next) => {
   try {
-    const payout = await prisma.payoutRequest.findUnique({ where: { id: req.params.id } });
+    const payout = await prisma.payoutRequest.findUnique({ where: { id: (req.params.id as string) } });
     if (!payout) throw new AppError('Payout not found', 404);
     if (payout.status !== 'PENDING_REVIEW') throw new AppError(`Cannot approve payout in status: ${payout.status}`, 400);
 
     await prisma.payoutRequest.update({
-      where: { id: req.params.id },
+      where: { id: (req.params.id as string) },
       data: { status: 'APPROVED', reviewedBy: req.user!.userId, reviewedAt: new Date() },
     });
 
     // Process the approved payout
-    await processApprovedPayout(req.params.id);
+    await processApprovedPayout((req.params.id as string));
 
     res.json({ success: true, data: { message: 'Payout approved and processing' } });
   } catch (err) {
@@ -246,17 +246,17 @@ paymentRouter.post('/admin/payouts/:id/approve', authGuard, roleGuard('ADMIN'), 
 paymentRouter.post('/admin/payouts/:id/reject', authGuard, roleGuard('ADMIN'), async (req: AuthenticatedRequest, res, next) => {
   try {
     const { reason } = req.body || {};
-    const payout = await prisma.payoutRequest.findUnique({ where: { id: req.params.id } });
+    const payout = await prisma.payoutRequest.findUnique({ where: { id: (req.params.id as string) } });
     if (!payout) throw new AppError('Payout not found', 404);
     if (payout.status !== 'PENDING_REVIEW') throw new AppError(`Cannot reject payout in status: ${payout.status}`, 400);
 
     await prisma.payoutRequest.update({
-      where: { id: req.params.id },
+      where: { id: (req.params.id as string) },
       data: { status: 'REJECTED', reviewedBy: req.user!.userId, reviewedAt: new Date(), reviewNote: reason || 'Rejected by admin' },
     });
 
     // Refund to wallet (skip status update — we already set REJECTED above)
-    await refundFailedPayout(req.params.id, reason || 'Rejected by admin', { skipStatusUpdate: true });
+    await refundFailedPayout((req.params.id as string), reason || 'Rejected by admin', { skipStatusUpdate: true });
 
     res.json({ success: true, data: { message: 'Payout rejected, funds refunded' } });
   } catch (err) {

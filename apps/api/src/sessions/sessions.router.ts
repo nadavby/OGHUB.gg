@@ -118,7 +118,7 @@ sessionsRouter.post('/create', async (req: AuthenticatedRequest, res, next) => {
 sessionsRouter.post('/:id/validate', enhancedHmacGuard, async (req: AuthenticatedRequest, res, next) => {
   try {
     const session = await prisma.gameSession.findUnique({
-      where: { id: req.params.id },
+      where: { id: (req.params.id as string) },
     });
 
     if (!session) throw new AppError('Session not found', 404);
@@ -201,7 +201,7 @@ sessionsRouter.post('/:id/events', enhancedHmacGuard, async (req: AuthenticatedR
     }
 
     const session = await prisma.gameSession.findUnique({
-      where: { id: req.params.id },
+      where: { id: (req.params.id as string) },
     });
 
     if (!session) throw new AppError('Session not found', 404);
@@ -247,7 +247,7 @@ sessionsRouter.post('/:id/end', enhancedHmacGuard, async (req: AuthenticatedRequ
     const { score, replayData, metadata } = validate(endSessionSchema, req.body);
 
     const session = await prisma.gameSession.findUnique({
-      where: { id: req.params.id },
+      where: { id: (req.params.id as string) },
       include: { challenge: true, game: true },
     });
 

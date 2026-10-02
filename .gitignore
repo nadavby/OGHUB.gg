@@ -16,3 +16,11 @@ games/*/Logs/
 games/*/UserSettings/
 games/*/*.csproj
 games/*/*.sln
+
+# Unity / Android build output
+games/*/.utmp/
+*.apk
+*.aab
+
+# Local tooling
+.claude/

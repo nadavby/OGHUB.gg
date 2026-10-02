@@ -16,7 +16,7 @@ gameRegistryRouter.put(
   roleGuard('DEVELOPER', 'ADMIN'),
   async (req: AuthenticatedRequest, res, next) => {
     try {
-      const { slug } = req.params;
+      const slug = req.params.slug as string;
 
       // Verify game exists and user owns it
       const game = await prisma.game.findUnique({
@@ -96,7 +96,7 @@ gameRegistryRouter.get(
   async (req, res, next) => {
     try {
       const game = await prisma.game.findUnique({
-        where: { slug: req.params.slug },
+        where: { slug: (req.params.slug as string) },
         include: { definition: true },
       });
       if (!game) throw new AppError('Game not found', 404);

@@ -86,7 +86,7 @@ export const updateProfileSchema = z.object({
 export function validate<T>(schema: z.ZodSchema<T>, data: unknown): T {
   const result = schema.safeParse(data);
   if (!result.success) {
-    const message = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+    const message = result.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ');
     throw new (require('./error-handler').AppError)(message, 400);
   }
   return result.data;
